@@ -246,17 +246,18 @@
   /* Interactive hero */
   .hero{min-height:calc(100vh - 70px);background:radial-gradient(circle at 72% 40%,#F3F5FF 0,#fff 44%,#fff 100%)}
   .hero .panel{display:none}
-  .hero .wrap{grid-template-columns:minmax(0,1fr) minmax(360px,1fr);gap:42px}
-  .hero-copy{max-width:620px}
-  .hero-copy h1{font-size:clamp(48px,6.2vw,84px);max-width:680px}
-  .hero-copy .sub{max-width:520px}
-  .hero-art{display:flex;align-items:center;justify-content:center;min-width:0}
-  .sprite-stage{position:relative;width:min(640px,48vw);aspect-ratio:16/9;border-radius:30px;background:#EEF2FF;box-shadow:0 30px 80px rgba(52,64,196,.18);overflow:hidden;isolation:isolate}
+  .hero .wrap{display:block;position:relative;min-height:calc(100vh - 70px)}
+  .hero-copy{position:absolute;inset:9% 0 auto;z-index:2;max-width:none;text-align:center;pointer-events:none}
+  .hero-copy h1{font-size:clamp(46px,6vw,82px);max-width:1040px;margin:14px auto 0}
+  .hero-copy .sub{max-width:560px;margin:20px auto 0}
+  .hero-copy .cta-row{justify-content:center;pointer-events:auto}
+  .hero-art{position:absolute;inset:30% 0 0;display:flex;align-items:flex-end;justify-content:center;min-width:0;z-index:1}
+  .sprite-stage{position:relative;width:min(700px,62vw);aspect-ratio:16/9;border-radius:30px;background:#EEF2FF;box-shadow:0 30px 80px rgba(52,64,196,.18);overflow:hidden;isolation:isolate}
   .sprite-stage:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(255,255,255,.96),rgba(236,238,255,.3) 66%,rgba(52,64,196,.12));z-index:-1}
-  .sprite-frame{position:absolute;inset:0;background-image:url("assets/synapse-hero-sprite.webp");background-repeat:no-repeat;background-position:0 50%;background-size:12000% 100%;image-rendering:auto;transform:scale(1.02)}
+  .sprite-frame{position:absolute;inset:0;background-image:url("assets/synapse-hero-sprite.png");background-repeat:no-repeat;background-position:0 50%;background-size:24000% 100%;image-rendering:auto;transform:scale(1.02)}
   .sprite-hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 13px;border:1px solid rgba(52,64,196,.16);border-radius:999px;background:rgba(255,255,255,.76);color:var(--indigo);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;backdrop-filter:blur(10px)}
-  @media(max-width:900px){.hero{padding:64px 0 36px}.hero .wrap{grid-template-columns:1fr;gap:36px}.hero-copy{max-width:680px}.hero-art{order:2}.sprite-stage{width:min(680px,100%)} }
-  @media(max-width:600px){.hero{padding-top:42px}.hero-copy h1{font-size:clamp(42px,12vw,58px)}.sprite-stage{border-radius:22px}.sprite-hint{font-size:9px;bottom:10px}}
+  @media(max-width:900px){.hero{padding:42px 0 0;min-height:calc(100vh - 62px)}.hero .wrap{min-height:calc(100vh - 62px)}.hero-copy{inset:7% 0 auto}.hero-copy h1{max-width:720px}.hero-art{inset:38% 0 0}.sprite-stage{width:min(680px,92vw)} }
+  @media(max-width:600px){.hero-copy h1{font-size:clamp(40px,11vw,58px)}.hero-copy .sub{font-size:15px}.hero-copy .cta-row{margin-top:24px}.hero-art{inset:48% 0 0}.sprite-stage{border-radius:22px;width:100%}.sprite-hint{font-size:9px;bottom:10px}}
 </style>
 </head>
 <body>
@@ -533,10 +534,10 @@
 </footer>
 
 <script>
-/* Mouse-controlled sprite: 120 frames sampled from the 10-second source video. */
+/* Mouse-controlled sprite: all 240 frames from the 10-second source video. */
 const spriteStage = document.getElementById('hero-sprite');
 const spriteFrame = document.getElementById('sprite-frame');
-const spriteFrames = 120;
+const spriteFrames = 240;
 let spriteTarget = 0;
 let spriteCurrent = 0;
 
