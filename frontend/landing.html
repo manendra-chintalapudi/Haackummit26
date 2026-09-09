@@ -242,6 +242,21 @@
     .edge{stroke-dashoffset:0 !important}
     .node{opacity:1 !important;transform:none !important}
   }
+
+  /* Interactive hero */
+  .hero{min-height:calc(100vh - 70px);background:radial-gradient(circle at 72% 40%,#F3F5FF 0,#fff 44%,#fff 100%)}
+  .hero .panel{display:none}
+  .hero .wrap{grid-template-columns:minmax(0,1fr) minmax(360px,1fr);gap:42px}
+  .hero-copy{max-width:620px}
+  .hero-copy h1{font-size:clamp(48px,6.2vw,84px);max-width:680px}
+  .hero-copy .sub{max-width:520px}
+  .hero-art{display:flex;align-items:center;justify-content:center;min-width:0}
+  .sprite-stage{position:relative;width:min(640px,48vw);aspect-ratio:16/9;border-radius:30px;background:#EEF2FF;box-shadow:0 30px 80px rgba(52,64,196,.18);overflow:hidden;isolation:isolate}
+  .sprite-stage:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(255,255,255,.96),rgba(236,238,255,.3) 66%,rgba(52,64,196,.12));z-index:-1}
+  .sprite-frame{position:absolute;inset:0;background-image:url("assets/synapse-hero-sprite.webp");background-repeat:no-repeat;background-position:0 50%;background-size:12000% 100%;image-rendering:auto;transform:scale(1.02)}
+  .sprite-hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 13px;border:1px solid rgba(52,64,196,.16);border-radius:999px;background:rgba(255,255,255,.76);color:var(--indigo);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;backdrop-filter:blur(10px)}
+  @media(max-width:900px){.hero{padding:64px 0 36px}.hero .wrap{grid-template-columns:1fr;gap:36px}.hero-copy{max-width:680px}.hero-art{order:2}.sprite-stage{width:min(680px,100%)} }
+  @media(max-width:600px){.hero{padding-top:42px}.hero-copy h1{font-size:clamp(42px,12vw,58px)}.sprite-stage{border-radius:22px}.sprite-hint{font-size:9px;bottom:10px}}
 </style>
 </head>
 <body>
@@ -262,27 +277,24 @@
 
 <!-- ================= HERO ================= -->
 <header class="hero" id="top">
-  <div class="panel"></div>
-
-  <!-- Animated evidence graph: edges draw in, nodes float & pulse, a signal dot rides the chain, hover highlights -->
-  <div id="graphbox" aria-hidden="true">
-    <svg id="gsvg" viewBox="0 0 760 640">
-      <g id="glayer" class="graph"></g>
-    </svg>
-  </div>
-
+  <div id="graphbox" hidden><svg id="gsvg" viewBox="0 0 760 640"><g id="glayer" class="graph"></g></svg></div>
   <div class="wrap">
-    <div>
-      <span class="tag reveal">Plant intelligence, fully traced</span>
-      <h1 class="reveal d1">One brain for your entire plant<span class="dot">.</span></h1>
-      <p class="sub reveal d2">Synapse connects your knowledge graph, plant databases and technical documents — then answers any question with the evidence chain to prove it.</p>
+    <div class="hero-copy">
+      <span class="tag reveal">Industrial knowledge, connected</span>
+      <h1 class="reveal d1">Industrial knowledge fragmentation turns into real-time operational intelligence<span class="dot">.</span></h1>
+      <p class="sub reveal d2">Synapse connects plant data, equipment history, quality records, procedures, and documents so every answer starts with the evidence behind it.</p>
       <div class="cta-row reveal d3">
-        <a class="btn btn-dark" href="/login">Sign in to Synapse</a>
-        <a class="btn btn-ghost" href="#solutions">See how it works</a>
+        <a class="btn btn-dark" href="/login">Open Synapse</a>
+        <a class="btn btn-ghost" href="#solutions">See the platform</a>
+      </div>
+    </div>
+    <div class="hero-art reveal d1">
+      <div class="sprite-stage" id="hero-sprite" role="img" aria-label="Synapse assistant animation that responds to pointer movement">
+        <div class="sprite-frame" id="sprite-frame"></div>
+        <span class="sprite-hint">Move your cursor</span>
       </div>
     </div>
   </div>
-  <div class="scroll-hint">SCROLL <span>↓</span></div>
 </header>
 
 <!-- ================= TECH STRIP ================= -->
@@ -521,6 +533,30 @@
 </footer>
 
 <script>
+/* Mouse-controlled sprite: 120 frames sampled from the 10-second source video. */
+const spriteStage = document.getElementById('hero-sprite');
+const spriteFrame = document.getElementById('sprite-frame');
+const spriteFrames = 120;
+let spriteTarget = 0;
+let spriteCurrent = 0;
+
+function setSpriteTarget(event) {
+  const x = event.clientX / innerWidth;
+  const y = event.clientY / innerHeight;
+  spriteTarget = Math.max(0, Math.min(spriteFrames - 1, Math.round((x * .84 + y * .16) * (spriteFrames - 1))));
+}
+
+spriteStage.addEventListener('pointermove', setSpriteTarget, {passive: true});
+spriteStage.addEventListener('pointerleave', () => { spriteTarget = 0; });
+
+function animateSprite() {
+  spriteCurrent += (spriteTarget - spriteCurrent) * .12;
+  const frame = Math.round(spriteCurrent);
+  spriteFrame.style.backgroundPosition = `${(frame / (spriteFrames - 1)) * 100}% 50%`;
+  requestAnimationFrame(animateSprite);
+}
+animateSprite();
+
 /* ---------------- nav shadow ---------------- */
 const nav = document.getElementById('nav');
 addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 30), {passive:true});
