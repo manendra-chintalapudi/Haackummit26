@@ -40,6 +40,10 @@
   .brand img{height:30px;width:auto;display:block}
   .nav-links{display:flex;gap:28px;font-size:14.5px;font-weight:600;color:var(--muted)}
   .nav-links a:hover{color:var(--ink)}
+  .nav-actions{display:flex;align-items:center;gap:18px}
+  .btn-contact{padding:10px 12px 10px 22px;background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:0 6px 18px rgba(14,18,36,.05)}
+  .btn-contact span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--indigo);color:#fff;font-size:15px}
+  .nav-login{font-size:14px;font-weight:700;color:var(--indigo)}
   .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px;border-radius:999px;
        padding:12px 24px;cursor:pointer;border:0;transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
   .btn-dark{background:var(--indigo);color:#fff}
@@ -243,21 +247,23 @@
     .node{opacity:1 !important;transform:none !important}
   }
 
-  /* Interactive hero */
-  .hero{min-height:calc(100vh - 70px);background:radial-gradient(circle at 72% 40%,#F3F5FF 0,#fff 44%,#fff 100%)}
+  /* Static hero */
+  .hero{min-height:calc(100vh - 70px);background:#F5F9FC;overflow:hidden}
   .hero .panel{display:none}
-  .hero .wrap{display:block;position:relative;min-height:calc(100vh - 70px)}
-  .hero-copy{position:absolute;inset:9% 0 auto;z-index:2;max-width:none;text-align:center;pointer-events:none}
-  .hero-copy h1{font-size:clamp(46px,6vw,82px);max-width:1040px;margin:14px auto 0}
-  .hero-copy .sub{max-width:560px;margin:20px auto 0}
-  .hero-copy .cta-row{justify-content:center;pointer-events:auto}
-  .hero-art{position:absolute;inset:30% 0 0;display:flex;align-items:flex-end;justify-content:center;min-width:0;z-index:1}
-  .sprite-stage{position:relative;width:min(700px,62vw);aspect-ratio:16/9;border-radius:30px;background:#EEF2FF;box-shadow:0 30px 80px rgba(52,64,196,.18);overflow:hidden;isolation:isolate}
-  .sprite-stage:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(255,255,255,.96),rgba(236,238,255,.3) 66%,rgba(52,64,196,.12));z-index:-1}
-  .sprite-frame{position:absolute;inset:0;background-image:url("assets/synapse-hero-sprite.png");background-repeat:no-repeat;background-position:0 50%;background-size:24000% 100%;image-rendering:auto;transform:scale(1.02)}
-  .sprite-hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 13px;border:1px solid rgba(52,64,196,.16);border-radius:999px;background:rgba(255,255,255,.76);color:var(--indigo);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;backdrop-filter:blur(10px)}
-  @media(max-width:900px){.hero{padding:42px 0 0;min-height:calc(100vh - 62px)}.hero .wrap{min-height:calc(100vh - 62px)}.hero-copy{inset:7% 0 auto}.hero-copy h1{max-width:720px}.hero-art{inset:38% 0 0}.sprite-stage{width:min(680px,92vw)} }
-  @media(max-width:600px){.hero-copy h1{font-size:clamp(40px,11vw,58px)}.hero-copy .sub{font-size:15px}.hero-copy .cta-row{margin-top:24px}.hero-art{inset:48% 0 0}.sprite-stage{border-radius:22px;width:100%}.sprite-hint{font-size:9px;bottom:10px}}
+  .hero .wrap{display:block;position:relative;min-height:calc(100vh - 70px);max-width:none;padding:0}
+  .hero-static-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center bottom}
+  .hero-copy{position:absolute;top:8%;left:50%;z-index:2;width:min(980px,calc(100% - 40px));transform:translateX(-50%);text-align:center}
+  .hero-copy .tag{color:#6A78D8}
+  .hero-copy h1{font-size:clamp(42px,6vw,82px);max-width:940px;margin:14px auto 0;color:#5571CF;text-shadow:0 4px 24px rgba(255,255,255,.8)}
+  .hero-copy h1 .hero-emphasis{display:block;color:#2D63C8;font-family:Georgia,serif;font-style:italic;font-weight:400;letter-spacing:-.06em}
+  .hero-copy .sub{max-width:530px;margin:18px auto 0;color:#42527B;font-size:16px}
+  .hero-copy .cta-row{justify-content:center;margin-top:24px}
+  .hero-copy .btn-dark{background:#2B6FEA;box-shadow:0 12px 30px rgba(43,111,234,.22)}
+  .hero-proof{position:absolute;z-index:3;display:flex;align-items:flex-start;gap:10px;width:220px;padding:14px 16px;border:1px solid rgba(255,255,255,.82);border-radius:16px;background:rgba(255,255,255,.66);box-shadow:0 14px 34px rgba(68,95,160,.12);backdrop-filter:blur(12px);color:#4D5B7A;font-size:12px;line-height:1.35}
+  .hero-proof:before{content:"✦";display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#2E78F0;color:#fff;font-size:12px;box-shadow:0 4px 12px rgba(46,120,240,.32)}
+  .proof-left{left:8%;top:47%}.proof-right{right:8%;top:50%}
+  @media(max-width:900px){.hero{min-height:calc(100vh - 62px)}.hero .wrap{min-height:calc(100vh - 62px)}.hero-copy{top:7%}.hero-copy h1{font-size:clamp(40px,8vw,64px)}.hero-proof{display:none}.hero-static-image{object-position:center bottom}}
+  @media(max-width:600px){.hero-copy{top:6%;width:calc(100% - 28px)}.hero-copy h1{font-size:clamp(36px,10vw,52px)}.hero-copy .sub{font-size:14px}.hero-copy .cta-row{margin-top:18px}.hero-static-image{height:72%;top:auto}.hero .wrap{min-height:calc(100vh - 62px)}}
 </style>
 </head>
 <body>
@@ -267,34 +273,34 @@
   <div class="wrap bar">
     <a class="brand" href="#top"><img src="assets/synapse-logo.png" alt="Synapse logo" />Synapse</a>
     <div class="nav-links">
-      <a href="#problem">Why</a>
+      <a href="#top">Home</a>
+      <a href="#problem">About us</a>
       <a href="#solutions">Platform</a>
-      <a href="#demo">Demo</a>
+      <a href="#demo">How it works</a>
       <a href="#faq">FAQ</a>
     </div>
-    <a class="btn btn-dark" href="/login">Sign in</a>
+    <div class="nav-actions">
+      <a class="btn btn-contact" href="#faq">Contact us <span>↗</span></a>
+      <a class="nav-login" href="/login">Login</a>
+    </div>
   </div>
 </nav>
 
 <!-- ================= HERO ================= -->
 <header class="hero" id="top">
-  <div id="graphbox" hidden><svg id="gsvg" viewBox="0 0 760 640"><g id="glayer" class="graph"></g></svg></div>
+  <img class="hero-static-image" src="assets/synapse-hero-static.png" alt="Synapse industrial operations assistant" />
   <div class="wrap">
     <div class="hero-copy">
-      <span class="tag reveal">Industrial knowledge, connected</span>
-      <h1 class="reveal d1">Industrial knowledge fragmentation turns into real-time operational intelligence<span class="dot">.</span></h1>
-      <p class="sub reveal d2">Synapse connects plant data, equipment history, quality records, procedures, and documents so every answer starts with the evidence behind it.</p>
+      <span class="tag reveal">Industrial intelligence</span>
+      <h1 class="reveal d1">Industrial knowledge fragmentation turns into<span class="hero-emphasis">real-time operational intelligence.</span></h1>
+      <p class="sub reveal d2">One place to understand plant data, equipment history, quality records, and procedures.</p>
       <div class="cta-row reveal d3">
-        <a class="btn btn-dark" href="/login">Open Synapse</a>
-        <a class="btn btn-ghost" href="#solutions">See the platform</a>
+        <a class="btn btn-dark" href="/login">Get started</a>
+        <a class="btn btn-ghost" href="#solutions">Explore Synapse</a>
       </div>
     </div>
-    <div class="hero-art reveal d1">
-      <div class="sprite-stage" id="hero-sprite" role="img" aria-label="Synapse assistant animation that responds to pointer movement">
-        <div class="sprite-frame" id="sprite-frame"></div>
-        <span class="sprite-hint">Move your cursor</span>
-      </div>
-    </div>
+    <div class="hero-proof proof-left">Search documents, equipment history, and quality records in one place.</div>
+    <div class="hero-proof proof-right">Source-linked answers for maintenance, quality, and compliance teams.</div>
   </div>
 </header>
 
@@ -534,30 +540,6 @@
 </footer>
 
 <script>
-/* Mouse-controlled sprite: all 240 frames from the 10-second source video. */
-const spriteStage = document.getElementById('hero-sprite');
-const spriteFrame = document.getElementById('sprite-frame');
-const spriteFrames = 240;
-let spriteTarget = 0;
-let spriteCurrent = 0;
-
-function setSpriteTarget(event) {
-  const x = event.clientX / innerWidth;
-  const y = event.clientY / innerHeight;
-  spriteTarget = Math.max(0, Math.min(spriteFrames - 1, Math.round((x * .84 + y * .16) * (spriteFrames - 1))));
-}
-
-spriteStage.addEventListener('pointermove', setSpriteTarget, {passive: true});
-spriteStage.addEventListener('pointerleave', () => { spriteTarget = 0; });
-
-function animateSprite() {
-  spriteCurrent += (spriteTarget - spriteCurrent) * .12;
-  const frame = Math.round(spriteCurrent);
-  spriteFrame.style.backgroundPosition = `${(frame / (spriteFrames - 1)) * 100}% 50%`;
-  requestAnimationFrame(animateSprite);
-}
-animateSprite();
-
 /* ---------------- nav shadow ---------------- */
 const nav = document.getElementById('nav');
 addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 30), {passive:true});
@@ -573,111 +555,6 @@ const track = document.getElementById('strip-track');
 track.innerHTML += track.innerHTML;
 const wtrack = document.getElementById('wtrack');
 if (wtrack) wtrack.innerHTML += wtrack.innerHTML;
-
-/* ================= HERO GRAPH =================
-   Chunky node-link diagram built in SVG. Animated:
-   - edges draw themselves on load (dashoffset)
-   - nodes scale in, then float
-   - ripple rings pulse outward from nodes on a stagger
-   - a signal dot travels the evidence chain on repeat
-   - hovering a node dims everything not connected to it
-   - pointer parallax shifts nodes by depth                        */
-const NODES = [
-  {id:0, x:120, y:150, r:46, d:.9},
-  {id:1, x:330, y: 90, r:40, d:.5},
-  {id:2, x:300, y:300, r:56, d:1},
-  {id:3, x:140, y:400, r:38, d:.6},
-  {id:4, x:520, y:180, r:48, d:.8},
-  {id:5, x:560, y:400, r:42, d:.5},
-  {id:6, x:420, y:520, r:36, d:.7},
-];
-const EDGES = [[0,1],[0,2],[1,4],[2,4],[2,3],[2,6],[4,5],[5,6],[1,2]];
-const CHAIN = [0,2,4,5,6];              /* the path the signal dot rides */
-const svgNS = 'http://www.w3.org/2000/svg';
-const layer = document.getElementById('glayer');
-const nodeEls = [], edgeEls = [];
-
-EDGES.forEach(([a, b], i) => {
-  const A = NODES[a], B = NODES[b];
-  const ln = document.createElementNS(svgNS, 'line');
-  ln.setAttribute('x1', A.x); ln.setAttribute('y1', A.y);
-  ln.setAttribute('x2', B.x); ln.setAttribute('y2', B.y);
-  ln.classList.add('edge');
-  const len = Math.hypot(B.x - A.x, B.y - A.y);
-  ln.style.setProperty('--len', len);
-  ln.style.transitionDelay = (0.15 + i * 0.09) + 's';
-  layer.appendChild(ln);
-  edgeEls.push({el: ln, a, b});
-});
-NODES.forEach((n, i) => {
-  const g = document.createElementNS(svgNS, 'g');
-  g.classList.add('node');
-  g.style.transitionDelay = (0.5 + i * 0.10) + 's';
-  const ring = document.createElementNS(svgNS, 'circle');
-  ring.setAttribute('cx', n.x); ring.setAttribute('cy', n.y); ring.setAttribute('r', n.r + 9);
-  ring.classList.add('ring');
-  ring.style.animation = `ripple 3.6s ease-out ${1.2 + i * .45}s infinite`;
-  const core = document.createElementNS(svgNS, 'circle');
-  core.setAttribute('cx', n.x); core.setAttribute('cy', n.y); core.setAttribute('r', n.r);
-  core.classList.add('core');
-  g.appendChild(ring); g.appendChild(core);
-  layer.appendChild(g);
-  nodeEls.push(g);
-
-  g.addEventListener('mouseenter', () => {
-    layer.classList.add('dim');
-    g.classList.add('hot');
-    edgeEls.forEach(e => {
-      if (e.a === n.id || e.b === n.id){
-        e.el.classList.add('hot');
-        nodeEls[e.a].classList.add('hot'); nodeEls[e.b].classList.add('hot');
-      }
-    });
-  });
-  g.addEventListener('mouseleave', () => {
-    layer.classList.remove('dim');
-    nodeEls.forEach(el => el.classList.remove('hot'));
-    edgeEls.forEach(e => e.el.classList.remove('hot'));
-  });
-});
-
-/* signal dot riding the evidence chain */
-const dot = document.createElementNS(svgNS, 'circle');
-dot.setAttribute('r', 9); dot.classList.add('pulse-dot'); dot.style.opacity = 0;
-layer.appendChild(dot);
-
-const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-requestAnimationFrame(() => document.getElementById('gsvg').classList.add('drawn'));
-document.getElementById('gsvg').classList.add('drawn'); /* ensure applied */
-
-let segT = 0, segI = 0, dotOn = false;
-setTimeout(() => dotOn = true, 1800);
-
-/* pointer parallax targets */
-let px = 0, py = 0, sx = 0, sy = 0;
-addEventListener('pointermove', e => {
-  px = (e.clientX / innerWidth - .5);
-  py = (e.clientY / innerHeight - .5);
-}, {passive:true});
-
-function frame(){
-  sx += (px - sx) * .06; sy += (py - sy) * .06;
-  nodeEls.forEach((g, i) => {
-    const d = NODES[i].d;
-    g.style.translate = `${sx * 26 * d}px ${sy * 20 * d}px`;
-  });
-  if (dotOn){
-    segT += 0.012;
-    if (segT >= 1){ segT = 0; segI = (segI + 1) % (CHAIN.length - 1); }
-    const A = NODES[CHAIN[segI]], B = NODES[CHAIN[segI + 1]];
-    const t = segT < .5 ? 2*segT*segT : 1 - Math.pow(-2*segT + 2, 2) / 2;   /* easeInOut */
-    dot.setAttribute('cx', A.x + (B.x - A.x) * t);
-    dot.setAttribute('cy', A.y + (B.y - A.y) * t);
-    dot.style.opacity = .95;
-  }
-  requestAnimationFrame(frame);
-}
-if (!reduced) requestAnimationFrame(frame);
 
 /* ---------------- scrollytelling scenes ---------------- */
 const steps = [...document.querySelectorAll('.step')];
