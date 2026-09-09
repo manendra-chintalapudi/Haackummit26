@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from pipeline import ask_synapse, warm_up
 from api.audit_store import append_event, list_events
 from api.compliance_store import get_standard_detail, get_summary as get_compliance_summary
+from api.compliance_deviations import list_deviations
 from api.knowledge_transfer import OPENROUTER_MODEL, extract_knowledge_cards, next_interview_turn
 from api.knowledge_store import save_transfer
 from api.rca_store import get_failure_detail, get_failures, get_summary
@@ -173,6 +174,13 @@ def compliance_summary():
 def compliance_standards():
     summary = get_compliance_summary()
     return {"count": len(summary["standards"]), "standards": summary["standards"]}
+
+
+@app.get("/api/compliance/deviations")
+def compliance_deviations():
+    deviations = list_deviations()
+    append_event(action="database.read", outcome="success", resource_type="compliance_deviations.sqlite3", detail="Loaded compliance deviations", metadata={"count": len(deviations)})
+    return {"count": len(deviations), "deviations": deviations}
 
 
 @app.get("/api/compliance/standards/{family_id}")
