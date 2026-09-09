@@ -22,6 +22,7 @@ from pipeline import ask_synapse, warm_up
 from api.audit_store import append_event, list_events
 from api.compliance_store import get_standard_detail, get_summary as get_compliance_summary
 from api.knowledge_transfer import OPENROUTER_MODEL, extract_knowledge_cards, next_interview_turn
+from api.knowledge_store import save_transfer
 from api.rca_store import get_failure_detail, get_failures, get_summary
 
 FRONTEND = SYNAPSE_ROOT / "frontend"
@@ -86,6 +87,7 @@ def ask(req: AskRequest):
         result = ask_synapse(question)
         plan = result.get("retrieval_plan", {}) if isinstance(result, dict) else {}
         append_event(action="question.answered", outcome="success", resource_type="chat_question", detail=question, metadata={"layers": plan.get("layers", []), "model": result.get("model_used") if isinstance(result, dict) else None, "latency": result.get("latency", {}) if isinstance(result, dict) else {}})
+        append_event(action="database.read", outcome="success", resource_type="retrieval_layers", detail="Synapse retrieval completed", metadata={"layers": plan.get("layers", [])})
         return result
     except Exception as exc:
         append_event(action="question.answered", outcome="failure", resource_type="chat_question", detail=question, metadata={"error": f"{type(exc).__name__}: {exc}"})
@@ -102,9 +104,12 @@ def audit_logs(limit: int = Query(default=100, ge=1, le=500), action: str | None
 def knowledge_transfer_interview(req: KnowledgeTransferRequest):
     """Generate one short, spoken interview turn with Tencent HY3 on OpenRouter."""
     try:
-        message = next_interview_turn(req.profile, req.plan, [entry.model_dump() for entry in req.transcript])
+        transcript = [entry.model_dump() for entry in req.transcript]
+        message = next_interview_turn(req.profile, req.plan, transcript)
+        append_event(action="knowledge_transfer.interview", outcome="success", resource_type="interview_session", detail=f"Interview turn {len(transcript) + 1}", metadata={"transcript_entries": len(transcript), "model": OPENROUTER_MODEL})
         return {"message": message, "complete": "[INTERVIEW_COMPLETE]" in message, "model": OPENROUTER_MODEL}
     except Exception as exc:
+        append_event(action="knowledge_transfer.interview", outcome="failure", resource_type="interview_session", detail=f"{type(exc).__name__}: {exc}")
         return JSONResponse(status_code=502, content={"error": f"{type(exc).__name__}: {exc}"})
 
 
@@ -114,9 +119,14 @@ def knowledge_transfer_extract(req: KnowledgeExtractionRequest):
     if not req.transcript:
         return JSONResponse(status_code=400, content={"error": "the interview transcript is empty"})
     try:
-        cards = extract_knowledge_cards(req.profile, [entry.model_dump() for entry in req.transcript])
-        return {"cards": cards, "model": OPENROUTER_MODEL}
+        transcript = [entry.model_dump() for entry in req.transcript]
+        cards = extract_knowledge_cards(req.profile, transcript)
+        document = save_transfer(req.profile, transcript, cards)
+        append_event(action="database.write", outcome="success", resource_type="knowledge_transfer.sqlite3", detail=f"Saved {document['document_id']}", metadata=document)
+        append_event(action="knowledge_transfer.completed", outcome="success", resource_type="knowledge_document", detail=document["document_id"], metadata=document)
+        return {"cards": cards, "document": document, "model": OPENROUTER_MODEL}
     except Exception as exc:
+        append_event(action="knowledge_transfer.completed", outcome="failure", resource_type="knowledge_document", detail=f"{type(exc).__name__}: {exc}")
         return JSONResponse(status_code=502, content={"error": f"{type(exc).__name__}: {exc}"})
 
 
