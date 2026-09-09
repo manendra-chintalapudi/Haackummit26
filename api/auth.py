@@ -15,8 +15,7 @@ SUPABASE_KEY = os.environ.get(
     "SUPABASE_PUBLISHABLE_KEY",
     "sb_publishable_Sz8R-hi_ccyAXoSjSeJu4g_xmv17UeE",
 )
-# Demo deployments accept every request. Set AUTH_REQUIRED=true for a secured deployment.
-AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "false").lower() in {"1", "true", "yes"}
+AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "true").lower() in {"1", "true", "yes"}
 _CACHE_TTL = int(os.environ.get("AUTH_CACHE_TTL_SECONDS", "60"))
 _cache: dict[str, tuple[float, "Identity"]] = {}
 _cache_lock = threading.Lock()

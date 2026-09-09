@@ -1,6 +1,22 @@
-"""Build a retrieval plan from entity matches and query intent.
+"""
+Tier 4: orchestrating router for Synapse.
 
-The router does not query data stores or generate answers.
+route(question) -> retrieval_plan {layers, details, confidence, tier, ...}
+
+Flow: build entity index once (module-level cache) -> Tier 1 entity match -> Tier 2
+rule-based classification -> only if Tier 2 says "ambiguous", Tier 3 LLM fallback.
+The returned plan is tagged with which tier produced it ("tier2" / "tier3") and, for
+Tier 3, whether the LLM answered or the safe default fired ("tier3_llm"/"tier3_default").
+
+Confidence vocabulary in the returned plan:
+  "confident"          -- Tier 2 rules resolved it (no LLM involved)
+  "ambiguous-resolved" -- Tier 2 was unsure; Tier 3's LLM produced a focused plan
+  "unresolvable"       -- even Tier 3 found no plannable intent (generic all-layers plan,
+                          model self-reported low confidence, or API fallback fired);
+                          the future synthesizer should ask a clarifying question here
+
+This module produces plans only -- it never queries Neo4j/DuckDB/Chroma and never
+generates answers.
 """
 from entity_index import build_entity_index
 from tier1_matcher import match_entities
@@ -34,7 +50,9 @@ def route(question: str) -> dict:
     return plan
 
 
-# Small manual smoke-test harness.
+# ---------------------------------------------------------------------------
+# demo / test harness
+# ---------------------------------------------------------------------------
 TEST_QUESTIONS = [
     "How many coils failed quality testing?",
     "Which equipment produced coil C10234?",

@@ -1,4 +1,25 @@
-"""Run read-only federated SQL over the four DuckDB source catalogs."""
+"""
+Structured retrieval layer: federated SQL over the plant's four source systems, executed
+DIRECTLY with DuckDB (no separate Trino service).
+
+DuckDB ATTACHes the four per-system DuckDB files as separate catalogs, so a single SQL string
+can join across all four systems using the SAME three-part `catalog.main.table` naming the
+Trino version used (e.g. `erp.main.coils JOIN scada.main.equipment`). SQL semantics are
+identical to the previous Trino implementation — only the connection/execution layer changed,
+which removes the Trino dependency for deployment (Railway / Vercel / Neo4j AuraDB).
+
+    erp    -> erp.duckdb    (coils, coil_materials, raw_materials)
+    scada  -> scada.duckdb  (equipment, AI4I official synthetic reference events)
+    qms    -> qms.duckdb    (quality_tests, deviations, standards)
+    cmms   -> cmms.duckdb   (failures, rca, technicians, procedures)
+
+The DuckDB files are read from DUCKDB_DIR (env var), defaulting to synapse/data/duckdb — point
+it at a mounted-volume path in production if the files live there instead of in the image.
+
+query_federated(sql) is what the router's structured_retrieval calls; one persistent in-memory
+connection ATTACHes all four files once and per-query cursors keep concurrent reads (the
+retrieval fan-out) safe.
+"""
 import os
 import threading
 import time
@@ -25,7 +46,9 @@ def _catalog_path(cat: str) -> str:
 
 
 def get_connection():
-    """Create the shared read-only connection on first use."""
+    """Lazily create ONE in-memory DuckDB connection with all four files ATTACHed read-only.
+    Reused for the process lifetime; per-query cursors keep concurrent reads safe. Lazy (not at
+    import) so a missing/locked file surfaces on first query rather than breaking app startup."""
     global _conn
     if _conn is not None:
         return _conn
@@ -48,7 +71,11 @@ def get_connection():
 
 
 def query_federated(sql: str) -> list:
-    """Run SQL and return rows as dictionaries."""
+    """Run arbitrary federated SQL across the erp/scada/qms/cmms catalogs.
+
+    Returns a list of dicts (column name -> value), one per row. Raises on SQL errors --
+    callers (the retrieval layer) decide how to surface failures. A fresh cursor per call
+    (created under a short lock) makes concurrent reads from the retrieval fan-out safe."""
     con = get_connection()
     with _lock:
         cur = con.cursor()
@@ -58,7 +85,8 @@ def query_federated(sql: str) -> list:
 
 
 def health_check() -> dict:
-    """Return the table count and missing tables for each catalog."""
+    """Confirm every catalog is attached and exposes its expected tables; returns
+    {catalog: {tables, missing}}."""
     con = get_connection()
     out = {}
     for cat, tables in CATALOGS.items():
