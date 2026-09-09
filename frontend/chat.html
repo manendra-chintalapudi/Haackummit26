@@ -181,6 +181,7 @@
   .modes button svg{width:13px;height:13px}
   .modes button.on{background:var(--accent-soft);border-color:#D9DCFA;color:var(--accent)}
   .comp-actions{display:flex;align-items:center;gap:8px}
+  .comp-ref{flex:1;overflow:auto;padding:24px 28px;background:#fafbfd}.comp-ref h2{margin:0;font-size:21px}.comp-ref p{color:var(--muted);font-size:12px}.comp-ref-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.comp-ref-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px}.comp-ref-card b{display:block;font-size:24px;color:#303652}.comp-ref-card span{font-size:11px;color:var(--muted)}.comp-ref-grid{display:grid;grid-template-columns:1.5fr .85fr;gap:14px}.comp-ref-panel{border:1px solid var(--line);border-radius:12px;background:#fff;padding:15px}.comp-ref-panel h3{margin:0 0 10px;font-size:13px}.comp-ref-alert{padding:10px 0;border-top:1px solid var(--line);font-size:12px}.comp-ref-alert b{display:block;color:#3d4260}.comp-ref-alert span{color:var(--muted);font-size:11px}.comp-ref-action{display:block;width:100%;border:0;border-top:1px solid var(--line);background:#fff;padding:11px 0;text-align:left;font:600 12px var(--f);color:#414662;cursor:pointer}.comp-ref-action:first-of-type{border:0;background:var(--accent-soft);border-radius:8px;padding:10px}.comp-ref-table{margin-top:14px}.comp-ref-table table{width:100%;border-collapse:collapse;font-size:12px}.comp-ref-table th,.comp-ref-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line)}.comp-ref-table th{font-size:10px;color:var(--muted);text-transform:uppercase}.comp-ref-score{color:var(--graph);font-weight:800}.comp-ref-status{font-size:10px;font-weight:800;color:#137653;background:#e6f7f1;border-radius:999px;padding:4px 7px}@media(max-width:850px){.comp-ref-cards{grid-template-columns:repeat(2,1fr)}.comp-ref-grid{grid-template-columns:1fr}}@media(max-width:600px){.comp-ref{padding:16px 12px}.comp-ref-cards{grid-template-columns:1fr}.comp-ref-table{overflow:auto}.comp-ref-table table{min-width:620px}}
   .send{width:40px;height:40px;border:0;border-radius:12px;cursor:pointer;background:var(--accent);
         display:grid;place-items:center;transition:.15s;box-shadow:0 6px 16px rgba(75,84,210,.35)}
   .send:hover{transform:translateY(-1px)} .send:disabled{opacity:.5;cursor:not-allowed;transform:none}
@@ -835,7 +836,7 @@
     </section>
 
     <section class="page" id="page-compliance">
-      <div id="compliance-react-root" class="synapse-pillars-root"><div class="sp-boot-state">Loading the Compliance workspace…</div></div>
+      <div id="compliance-react-root" class="synapse-pillars-root"></div>
     </section>
 
     <section class="page" id="page-knowledge-transfer">
@@ -1124,6 +1125,11 @@ async function openComplianceStandard(familyId){
   try{renderComplianceDetail(await complianceFetch(`/api/compliance/standards/${encodeURIComponent(familyId)}`));}catch(err){document.getElementById("complianceDetail").innerHTML=`<button class="rca-back" onclick="closeComplianceDetail()">← All standards</button><div class="rca-empty">Could not load this standard: ${esc(err.message)}</div>`;}
 }
 function closeComplianceDetail(){complianceCurrent=null;document.getElementById("complianceDetailView").hidden=true;document.getElementById("complianceListView").hidden=false;}
+async function renderComplianceReference(){
+  const root=document.getElementById("compliance-react-root");
+  root.innerHTML=`<div class="comp-ref"><h2>Compliance Dashboard</h2><p>Operational view of standards, deviations, and corrective-action evidence.</p><div class="comp-ref-cards"><div class="comp-ref-card"><span>Standards tracked</span><b id="crStandards">—</b></div><div class="comp-ref-card"><span>Compliant tests</span><b id="crCompliant">—</b></div><div class="comp-ref-card"><span>Open deviations</span><b id="crDeviations">—</b></div><div class="comp-ref-card"><span>Failure-linked deviations</span><b id="crLinked">—</b></div></div><div class="comp-ref-grid"><section class="comp-ref-panel"><h3>Recent compliance alerts</h3><div id="crAlerts"><div class="comp-ref-alert">Loading compliance signals…</div></div></section><aside class="comp-ref-panel"><h3>Quick actions</h3><button class="comp-ref-action" onclick="location.hash='#/compliance'">Review open deviations</button><button class="comp-ref-action" onclick="location.hash='#/logs'">Open system logs</button><button class="comp-ref-action" onclick="location.hash='#/knowledge-transfer'">Capture expert knowledge</button></aside></div><section class="comp-ref-panel comp-ref-table"><h3>Standards overview</h3><table><thead><tr><th>Standard</th><th>Tests</th><th>Failed</th><th>Deviations</th><th>Compliance score</th><th>Status</th></tr></thead><tbody id="crRows"></tbody></table></section></div>`;
+  try{const summary=await complianceFetch("/api/compliance/summary"), standards=summary.standards||[];document.getElementById("crStandards").textContent=summary.active_standard_families??standards.length;document.getElementById("crCompliant").textContent=Math.max(0,(summary.total_tests||0)-(summary.failed_tests||0));document.getElementById("crDeviations").textContent=summary.total_deviations||0;document.getElementById("crLinked").textContent=summary.failure_linked_deviations||0;document.getElementById("crRows").innerHTML=standards.map(s=>{const score=Math.max(0,100-Number(s.failure_rate_pct||0)).toFixed(1);return `<tr><td><b>${esc(s.name)}</b><br><small>${esc(s.scope||"")}</small></td><td>${s.total_tests||0}</td><td>${s.fail_count||0}</td><td>${s.deviation_count||0}</td><td class="comp-ref-score">${score}%</td><td><span class="comp-ref-status">${s.risk?.warning?"Review needed":"On track"}</span></td></tr>`;}).join("");const alerts=standards.filter(s=>s.risk?.warning||s.fail_count).slice(0,3);document.getElementById("crAlerts").innerHTML=alerts.length?alerts.map(s=>`<div class="comp-ref-alert"><b>${esc(s.name)} · ${s.fail_count||0} failed tests</b><span>${s.risk?.label||"Review standard evidence and linked deviations."}</span></div>`).join(""):`<div class="comp-ref-alert"><b>No urgent compliance alerts</b><span>Current standards have no active warning signal.</span></div>`;}catch(error){document.getElementById("crAlerts").innerHTML=`<div class="comp-ref-alert"><b>Could not load compliance data</b><span>${esc(error.message)}</span></div>`;}
+}
 function applyRoute(){
   const r = (location.hash.replace("#/","") || "chat").split("/")[0];
   route = ROUTES.includes(r) ? r : "chat";
@@ -1139,6 +1145,7 @@ function applyRoute(){
   if(heading){heading.setAttribute("tabindex","-1");requestAnimationFrame(()=>heading.focus({preventScroll:true}));}
   if (route === "history") renderHistoryPage();
   if (route === "logs") loadAuditLogs();
+  if (route === "compliance") renderComplianceReference();
   if (route === "graph" && window.initKG) window.initKG();
 }
 document.querySelectorAll("#nav a").forEach(a => a.addEventListener("click", () => go(a.dataset.route)));
@@ -1937,7 +1944,7 @@ if (location.hash.replace("#/","") === "graph") initKG();
   let pillarsModule;
   async function loadPillarUI(){
     const pillarRoute=(location.hash.replace(/^#\//,"").split("/")[0]);
-    if(pillarRoute!=="rca"&&pillarRoute!=="compliance"&&pillarRoute!=="admin"&&pillarRoute!=="knowledge-transfer")return;
+    if(pillarRoute!=="rca"&&pillarRoute!=="admin"&&pillarRoute!=="knowledge-transfer")return;
     if(!document.querySelector('link[data-synapse-pillars]')){
       const css=document.createElement("link");css.rel="stylesheet";css.href="ui-dist/synapse-pillars.css";css.dataset.synapsePillars="true";document.head.appendChild(css);
     }
