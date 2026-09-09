@@ -45,8 +45,9 @@ async function accessToken(timeoutMs = 10_000): Promise<string> {
 
 export async function apiFetch<T>(path: string): Promise<T> {
   let token = await accessToken();
+  if (!token) throw new Error("Your signed-in session is not ready. Refresh or sign in again.");
   const base = (window.SYNAPSE_API_URL || window.location.origin).replace(/\/+$/, "");
-  const request = (value: string) => fetch(`${base}${path}`, { headers: value ? { Authorization: `Bearer ${value}` } : {} });
+  const request = (value: string) => fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${value}` } });
   let response = await request(token);
   if (response.status === 401 && window.synapseRefreshAccessToken) {
     token = await window.synapseRefreshAccessToken();
@@ -69,10 +70,11 @@ export async function apiFetch<T>(path: string): Promise<T> {
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   let token = await accessToken();
+  if (!token) throw new Error("Your signed-in session is not ready. Refresh or sign in again.");
   const base = (window.SYNAPSE_API_URL || window.location.origin).replace(/\/+$/, "");
   const request = (value: string) => fetch(`${base}${path}`, {
     method: "POST",
-    headers: value ? { Authorization: `Bearer ${value}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${value}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   let response = await request(token);

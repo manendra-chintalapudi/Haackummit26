@@ -9,7 +9,8 @@ from collections import Counter
 from datetime import date, datetime
 
 from confidence import calibrate_confidence
-from graph_store import query_graph
+from graph_store import _local_neighborhood, _node_index, query_graph
+from structured_store import query_federated
 
 SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "unrated": 0}
 _CACHE_SECONDS = 30
@@ -81,6 +82,145 @@ ORDER BY other.timestamp DESC
 """
 
 
+def _local_failure_rows() -> list[dict]:
+    """Build the RCA list from the committed ontology when Neo4j is unavailable."""
+    failures = _node_index("failure", "failure_id")
+    equipment = _node_index("equipment", "equipment_id")
+    rcas = _node_index("rca", "rca_id").values()
+    deviations = _node_index("deviation", "deviation_id").values()
+    rcas_by_failure = {}
+    for rca in rcas:
+        rcas_by_failure.setdefault(rca.get("failure_id"), []).append(rca)
+    deviations_by_failure = {}
+    for deviation in deviations:
+        failure_id = deviation.get("failure_id_fk")
+        if failure_id:
+            deviations_by_failure.setdefault(failure_id, []).append(deviation)
+    rows = []
+    for failure in failures.values():
+        fid = failure.get("failure_id")
+        eq = equipment.get(failure.get("equipment_id"), {})
+        linked_rcas = rcas_by_failure.get(fid, [])
+        rows.append({
+            "equipment": {"equipment_id": eq.get("equipment_id"), "name": eq.get("name"), "type": eq.get("type")},
+            "failure": {key: failure.get(key) for key in ("failure_id", "failure_mode", "timestamp")},
+            "rca": linked_rcas[0] if linked_rcas else {},
+            "deviations": [{"deviation_id": d.get("deviation_id"), "severity": d.get("severity")}
+                           for d in deviations_by_failure.get(fid, [])],
+        })
+    return rows
+
+
+def _local_failure_detail(failure_id: str) -> dict | None:
+    records = _local_neighborhood("failure", failure_id)
+    if not records:
+        return None
+    row = records[0]
+    rca_records = row.get("rca_records") or []
+    analysts = row.get("rca_analysts") or []
+    procedures = row.get("procedures") or []
+    return {
+        "equipment": row.get("equipment") or {},
+        "failure": row.get("failure") or {},
+        "rca": rca_records[0] if rca_records else {},
+        "technician": analysts[0] if analysts else {},
+        "procedure": procedures[0] if procedures else {},
+        "documents": row.get("documents") or [],
+        "deviations": [], "coils": [], "downstream_tests": [],
+        "_evidence_backend": "locked_ontology_snapshot",
+    }
+
+
+def _duckdb_failure_rows() -> list[dict]:
+    """Read the RCA register from DuckDB, without requiring Neo4j."""
+    rows = query_federated(
+        """
+        SELECT e.equipment_id, e.name AS equipment_name, e.type AS equipment_type,
+               f.failure_id, f.failure_mode, f.timestamp,
+               r.rca_id, r.rca_date, r.root_cause_text, r.corrective_action,
+               r.procedure_ref, r.violated_step,
+               d.deviation_id, d.severity
+        FROM cmms.main.failures f
+        LEFT JOIN scada.main.equipment e ON e.equipment_id = f.equipment_id
+        LEFT JOIN cmms.main.rca r ON r.failure_id = f.failure_id
+        LEFT JOIN qms.main.deviations d ON d.failure_id_fk = f.failure_id
+        ORDER BY f.timestamp DESC
+        """
+    )
+    grouped: dict[str, dict] = {}
+    for row in rows:
+        failure_id = row.get("failure_id")
+        if not failure_id:
+            continue
+        item = grouped.setdefault(failure_id, {
+            "equipment": {
+                "equipment_id": row.get("equipment_id"),
+                "name": row.get("equipment_name"),
+                "type": row.get("equipment_type"),
+            },
+            "failure": {key: row.get(key) for key in ("failure_id", "failure_mode", "timestamp")},
+            "rca": {key: row.get(key) for key in (
+                "rca_id", "rca_date", "root_cause_text", "corrective_action", "procedure_ref", "violated_step"
+            ) if row.get(key) is not None},
+            "deviations": [],
+        })
+        if row.get("deviation_id"):
+            item["deviations"].append({"deviation_id": row["deviation_id"], "severity": row.get("severity")})
+    return list(grouped.values())
+
+
+def _duckdb_failure_detail(failure_id: str) -> dict | None:
+    """Read one RCA chain from DuckDB and return the API's existing shape."""
+    rows = query_federated(
+        """
+        SELECT e.equipment_id, e.name AS equipment_name, e.type AS equipment_type,
+               e.location, f.failure_id, f.failure_mode, f.timestamp, f.sensor_values,
+               r.rca_id, r.rca_date, r.root_cause_text, r.corrective_action,
+               r.violated_step, r.procedure_ref, r.analyst,
+               t.technician_id, t.name AS technician_name, t.role AS technician_role,
+               t.shift, t.certification,
+               p.title AS procedure_title, p.steps_text AS procedure_steps,
+               d.deviation_id, d.severity, d.description, d.coil_id_fk
+        FROM cmms.main.failures f
+        LEFT JOIN scada.main.equipment e ON e.equipment_id = f.equipment_id
+        LEFT JOIN cmms.main.rca r ON r.failure_id = f.failure_id
+        LEFT JOIN cmms.main.technicians t ON t.technician_id = r.analyst
+        LEFT JOIN cmms.main.procedures p ON p.procedure_id = r.procedure_ref
+        LEFT JOIN qms.main.deviations d ON d.failure_id_fk = f.failure_id
+        WHERE f.failure_id = ?
+        """.replace("?", f"'{failure_id.replace(chr(39), chr(39) * 2)}'", 1)
+    )
+    if not rows:
+        return None
+    first = rows[0]
+    rca = {key: first.get(key) for key in (
+        "rca_id", "rca_date", "root_cause_text", "corrective_action", "violated_step", "procedure_ref"
+    ) if first.get(key) is not None}
+    deviations = []
+    seen = set()
+    for row in rows:
+        if row.get("deviation_id") and row["deviation_id"] not in seen:
+            seen.add(row["deviation_id"])
+            deviations.append({key: row.get(key) for key in ("deviation_id", "severity", "description", "coil_id_fk")})
+    technician = {key: first.get(source) for key, source in {
+        "technician_id": "technician_id", "name": "technician_name", "role": "technician_role", "shift": "shift", "certification": "certification"
+    }.items() if first.get(source) is not None}
+    procedure = {key: first.get(source) for key, source in {
+        "procedure_id": "procedure_ref", "title": "procedure_title", "steps_text": "procedure_steps"
+    }.items() if first.get(source) is not None}
+    return {
+        "equipment": {key: first.get(source) for key, source in {
+            "equipment_id": "equipment_id", "name": "equipment_name", "type": "equipment_type", "location": "location"
+        }.items() if first.get(source) is not None},
+        "failure": {key: first.get(key) for key in ("failure_id", "failure_mode", "timestamp", "sensor_values")},
+        "rca": rca,
+        "technician": technician,
+        "procedure": procedure,
+        "documents": [], "deviations": deviations, "coils": [], "downstream_tests": [],
+        "_evidence_backend": "duckdb",
+    }
+
+
 def _plain(value):
     if isinstance(value, dict):
         return {key: _plain(item) for key, item in value.items()}
@@ -115,7 +255,16 @@ def _load_failures(force: bool = False) -> list[dict]:
     with _cache_lock:
         if not force and _cache_rows is not None and now - _cache_at < _CACHE_SECONDS:
             return [dict(row) for row in _cache_rows]
-    raw = [_plain(row) for row in query_graph(LIST_QUERY)]
+    try:
+        raw = [_plain(row) for row in _duckdb_failure_rows()]
+        snapshot_fallback = False
+    except Exception:
+        try:
+            raw = [_plain(row) for row in query_graph(LIST_QUERY)]
+            snapshot_fallback = False
+        except Exception:
+            raw = _local_failure_rows()
+            snapshot_fallback = True
     cause_counts = Counter(
         _normalise((row.get("rca") or {}).get("root_cause_text"))
         for row in raw if (row.get("rca") or {}).get("root_cause_text")
@@ -141,6 +290,7 @@ def _load_failures(force: bool = False) -> list[dict]:
             "has_rca": has_rca,
             "rca_id": rca.get("rca_id"),
             "recurrence_count": recurrence_count,
+            "evidence_backend": "locked_ontology_snapshot" if snapshot_fallback else "DuckDB",
         })
     with _cache_lock:
         _cache_rows, _cache_at = rows, time.monotonic()
@@ -212,9 +362,58 @@ def _actions(rca: dict, recurrence_count: int, downstream_count: int) -> list[di
 
 
 def get_failure_detail(failure_id: str) -> dict | None:
-    rows = [_plain(row) for row in query_graph(DETAIL_QUERY, {"failure_id": failure_id})]
+    try:
+        duckdb_detail = _duckdb_failure_detail(failure_id)
+    except Exception:
+        duckdb_detail = None
+    if duckdb_detail is not None:
+        row = duckdb_detail
+        rca = row.get("rca") or {}
+        recurrences = []
+        row["provenance"] = {
+            "query_mode": "duckdb",
+            "procedure_path": "Failure -> DuckDB cmms.rca -> cmms.procedures",
+            "llm_used": False,
+        }
+        row["evidence_chain"] = [
+            {"kind": "Failure", "id": (row.get("failure") or {}).get("failure_id"), "label": (row.get("failure") or {}).get("failure_mode"), "record": row.get("failure"), "citation": "DuckDB"},
+            {"kind": "RCA", "id": rca.get("rca_id"), "label": "Root cause analysis", "record": rca, "citation": "DuckDB"},
+        ]
+        row["recurrences"] = recurrences
+        row["recurrence_count"] = 0
+        row["confidence"] = calibrate_confidence(direct_chain=bool(rca.get("rca_id")), corroborating_sources=sum(bool(row.get(key)) for key in ("technician", "procedure", "deviations")), sample_size=1)
+        row["severity"] = _severity(row.get("deviations") or [])
+        row["status"] = "resolved" if rca.get("rca_id") else "open"
+        row["recommended_actions"] = _actions(rca, 0, 0)
+        return row
+    try:
+        rows = [_plain(row) for row in query_graph(DETAIL_QUERY, {"failure_id": failure_id})]
+    except Exception:
+        rows = []
     if not rows:
-        return None
+        local = _local_failure_detail(failure_id)
+        if local is None:
+            return None
+        local["provenance"] = {
+            "query_mode": "locked_ontology_snapshot_fallback",
+            "procedure_path": "Failure <-[:EXPERIENCED]- Equipment -[:FOLLOWS_PROCEDURE]-> Procedure",
+            "llm_used": False,
+        }
+        local["evidence_chain"] = [
+            {"kind": "Failure", "id": (local.get("failure") or {}).get("failure_id"),
+             "label": (local.get("failure") or {}).get("failure_mode"), "record": local.get("failure"), "citation": "Graph"},
+            {"kind": "RCA", "id": (local.get("rca") or {}).get("rca_id"),
+             "label": "Root cause analysis", "record": local.get("rca"), "citation": "Graph"},
+        ]
+        local["recurrences"] = []
+        local["recurrence_count"] = 0
+        local["confidence"] = calibrate_confidence(
+            direct_chain=bool((local.get("rca") or {}).get("rca_id")), corroborating_sources=0, sample_size=1
+        )
+        local["severity"] = "unrated"
+        local["status"] = "resolved" if (local.get("rca") or {}).get("rca_id") else "open"
+        local["recommended_actions"] = _actions(local.get("rca") or {}, 0, 0)
+        return local
     row = rows[0]
     failure, equipment = row.get("failure") or {}, row.get("equipment") or {}
     rca, technician, procedure = row.get("rca") or {}, row.get("technician") or {}, row.get("procedure") or {}

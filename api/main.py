@@ -1,10 +1,24 @@
-"""FastAPI entry point for the Synapse API."""
+"""
+Synapse / Maven demo API.
+
+Thin FastAPI wrapper around ask_synapse() so the browser chat UI can drive the full
+pipeline (router -> graph[Neo4j] / structured[DuckDB] / documents[Chroma] retrieval ->
+synthesizer) live.
+
+Run (from inside synapse/):
+    uvicorn api.main:app --host 0.0.0.0 --port 8000      # Railway: --port $PORT
+or simply:
+    python api/main.py
+
+Environment (see .env.example): NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD, OPENROUTER_API_KEY,
+ALLOWED_ORIGINS (CORS), and optional DUCKDB_DIR / CHROMA_DIR data paths.
+"""
 import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# Keep top-level modules importable when launched from the repository root.
+# make the pipeline + retrieval/embedding modules importable regardless of launch cwd
 SYNAPSE_ROOT = Path(__file__).resolve().parent.parent          # -> synapse/
 for _p in (SYNAPSE_ROOT, SYNAPSE_ROOT / "retrieval", SYNAPSE_ROOT / "embeddings",
            SYNAPSE_ROOT / "router", SYNAPSE_ROOT / "synthesizer"):
@@ -29,11 +43,12 @@ FRONTEND = SYNAPSE_ROOT / "frontend"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Warm-up is opt-in; the first document query can initialize the stack lazily.
+    # Railway must become ready before loading the relatively large embedding stack.
+    # Keep eager warm-up opt-in; the first document query initializes it on demand.
     if os.environ.get("WARM_UP_ON_STARTUP", "false").lower() not in {"1", "true", "yes"}:
         yield
         return
-    # Preload the embedding model and vector store when requested.
+    # pre-load the embedding model + vector store so the first real request is fast
     try:
         warm_up()
         print("[startup] warm_up complete — embedding model + vector store ready")
@@ -44,7 +59,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Synapse / Maven Demo API", version="1.0", lifespan=lifespan)
 
-# ALLOWED_ORIGINS accepts a comma-separated list; "*" is the local default.
+# CORS: allow the Vercel frontend origin(s). ALLOWED_ORIGINS is a comma-separated list, or
+# "*" (default) to allow any origin — tighten to the real Vercel domain(s) in production.
+# (file:// origin shows up as 'null'; "*" covers it for local demo use.)
 _origins_env = os.environ.get("ALLOWED_ORIGINS", "*").strip()
 ALLOW_ORIGINS = ["*"] if _origins_env in ("", "*") else [o.strip() for o in _origins_env.split(",") if o.strip()]
 app.add_middleware(
@@ -58,6 +75,9 @@ app.add_middleware(
 
 class AskRequest(BaseModel):
     question: str
+    # The chat client sends recent turns so short follow-ups such as "why?"
+    # can be resolved before the domain router runs.
+    history: list[dict] = Field(default_factory=list)
 
 
 class InterviewEntry(BaseModel):
@@ -83,7 +103,7 @@ def ask(req: AskRequest, identity: Identity = Depends(require_user)):
     if not question:
         return JSONResponse(status_code=400, content={"error": "question is empty"})
     try:
-        return ask_synapse(question)
+        return ask_synapse(question, history=req.history)
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": f"{type(exc).__name__}: {exc}"})
 
