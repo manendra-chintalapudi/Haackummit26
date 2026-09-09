@@ -32,10 +32,17 @@
     .field label{color:#315b9c}.field input,.field select{border-color:#b9d0f5;background:rgba(255,255,255,.84);color:#102b65;box-shadow:0 4px 14px rgba(50,101,190,.05)}.field input:focus,.field select:focus{border-color:#2376e8;box-shadow:0 0 0 4px rgba(35,118,232,.12)}
     .remember{color:#6680aa}.remember input{accent-color:#2376e8}.swipe{background:linear-gradient(100deg,#135bd0,#2496ee);box-shadow:0 14px 30px rgba(27,105,218,.24)}.swipe-handle{color:#1766d1}.fine{color:#7890b5}
     @media(max-width:760px){body{padding:14px}.shell{display:flex;min-height:calc(100dvh - 28px);border-radius:24px}.brand-panel{height:250px;min-height:250px;border-right:0;border-bottom:1px solid rgba(66,108,204,.16);padding:20px 22px 30px}.brand-scene{position:absolute;right:10px;top:34px;width:170px;height:170px;min-height:0}.login-scene{width:170px;height:170px}.panel-copy{max-width:55%;margin-top:auto}.panel-copy h2{font-size:24px}.auth{padding:34px 24px 28px}.auth h1{font-size:30px}}
+    /* Keep the original compact wordmark while giving the mascot a full-size orbit. */
+    .login-scene{width:410px;height:410px}
+    .brand-scene{min-height:410px}
+    .logo-focus{width:246px;height:332px;background:transparent;border-radius:0;box-shadow:none}
+    .logo-focus img{width:100%;height:100%;object-fit:contain}
+    .orbit.one{inset:24px}.orbit.two{inset:0}
+    @media(max-width:760px){.brand-scene{width:290px;height:290px;right:-8px;top:18px}.login-scene{width:290px;height:290px}.logo-focus{width:170px;height:228px}.orbit.one{inset:17px}}
   </style>
 </head>
 <body data-auth-page="true"><main class="shell" id="auth-shell">
-  <section class="brand-panel"><a class="brand" href="/"><img src="assets/synapse-character-transparent.png" alt="Synapse mascot">Synapse</a>
+  <section class="brand-panel"><a class="brand" href="/"><img src="assets/synapse-logo.png" alt="Synapse">Synapse</a>
     <div class="brand-scene" aria-hidden="true"><div class="login-scene"><div class="orbit one"><i></i></div><div class="orbit two"><i></i></div><div class="logo-focus"><img src="assets/synapse-character-transparent.png" alt=""></div></div><div class="network-scene"><img src="assets/auth-network-v1.webp" alt=""></div></div>
     <div class="panel-copy"><h2 id="visual-title">Welcome back.</h2><p id="visual-copy">Continue your traceable plant investigations securely.</p></div>
   </section>
