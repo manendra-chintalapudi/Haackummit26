@@ -4,7 +4,6 @@
 
 Synapse is a unified asset and operations brain for industrial plants. It connects structured operational data, live-style telemetry records, quality and compliance information, maintenance history, documents, and expert knowledge so teams can ask one question and receive an evidence-backed answer.
 
-> Built for the ET AI Hackathon 2026 — Problem Statement 8: **AI for Industrial Knowledge Intelligence: Unified Asset & Operations Brain**.
 
 ## 1. Problem statement
 
