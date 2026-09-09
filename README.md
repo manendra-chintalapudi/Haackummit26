@@ -1,20 +1,20 @@
 # 🧠 Synapse
 
-## AI-powered industrial knowledge intelligence for steel operations
+## Industrial operations search and decision support
 
-Synapse is a unified asset and operations brain for industrial plants. It connects structured operational data, live-style telemetry records, quality and compliance information, maintenance history, documents, and expert knowledge so teams can ask one question and receive an evidence-backed answer.
+Synapse connects structured operational data, telemetry records, quality and compliance information, maintenance history, documents, and expert knowledge. It returns answers with the records used to produce them.
 
 > Built for the ET AI Hackathon 2026 — Problem Statement 8: **AI for Industrial Knowledge Intelligence: Unified Asset & Operations Brain**.
 
 ## 1. Problem statement
 
-Industrial operations are information-rich but decision-poor. The facts needed to answer a single production, maintenance, quality, or compliance question are distributed across systems that were designed to operate independently: ERP, CMMS, SCADA/DCS, QMS, document repositories, standards registers, and RCA archives [R1][R2]. These systems use different identifiers, data shapes, timestamps, and vocabularies, so the problem is not simply search; it is the absence of a shared operational context [R3].
+The facts needed to answer a production, maintenance, quality, or compliance question are distributed across independent systems: ERP, CMMS, SCADA/DCS, QMS, document repositories, standards registers, and RCA archives [R1][R2]. These systems use different identifiers, data shapes, timestamps, and vocabularies. A user must assemble the relevant records before an investigation can begin [R3].
 
 As a result, a shift engineer investigating a recurring failure may need to manually combine an equipment history, sensor event, work order, operating procedure, previous RCA, affected coils, quality tests, and the applicable standard. The work is slow, difficult to audit, and dependent on the experience of the person who knows where each fact is stored [R4][R5].
 
 ### The core question
 
-> **How can an industrial team turn fragmented plant data and institutional knowledge into a real-time, traceable decision-support layer without replacing the source systems or allowing an AI model to invent facts or take unapproved actions?** [R1][R6]
+> **How can an industrial team query fragmented plant data and institutional knowledge without replacing source systems or allowing an AI model to invent facts or take unapproved actions?** [R1][R6]
 
 ### Why existing approaches are insufficient
 
@@ -87,7 +87,7 @@ Synapse is designed for decision support, not autonomous plant control. Proposed
 
 ## 4. Domain model and data lineage
 
-The ontology defines the entities and valid relationships before data is loaded. Core entities include `Equipment`, `Failure`, `RCA`, `Procedure`, `Technician`, `Coil`, `QualityTest`, `Standard`, `Deviation`, `RawMaterial`, and `Document` [R3]. Relationships such as `EXPERIENCED`, `DIAGNOSED_BY`, `HAS_DEVIATION`, `TESTED_BY`, `MADE_FROM`, `FOLLOWS_PROCEDURE`, and `DOCUMENTED_IN` provide the connective tissue missing from isolated source systems [R3].
+The ontology defines the entities and valid relationships before data is loaded. Core entities include `Equipment`, `Failure`, `RCA`, `Procedure`, `Technician`, `Coil`, `QualityTest`, `Standard`, `Deviation`, `RawMaterial`, and `Document` [R3]. Relationships such as `EXPERIENCED`, `DIAGNOSED_BY`, `HAS_DEVIATION`, `TESTED_BY`, `MADE_FROM`, `FOLLOWS_PROCEDURE`, and `DOCUMENTED_IN` link records from the separate source systems [R3].
 
 Every record is classified by provenance where applicable: real, synthetic, hybrid, or reference-derived [R3]. Plant-specific facts are kept separate from general industry explanations. An industry reference can explain why a failure mechanism is plausible, but it is not treated as proof that the mechanism occurred at this plant [R3][R9].
 
@@ -228,6 +228,6 @@ See [`LICENSE`](LICENSE).
 
 <div align="center">
 
-**Synapse turns fragmented industrial data into traceable operational context.**
+**Synapse links industrial records so teams can investigate with the same context.**
 
 </div>
