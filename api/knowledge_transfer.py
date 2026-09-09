@@ -11,9 +11,8 @@ import requests
 from synthesizer.config import CHAT_URL, get_openrouter_key
 
 
-# OpenRouter retired the old ``tencent/hy3:free`` route. Keep the model
-# configurable so a future provider migration does not require a code deploy.
-OPENROUTER_MODEL = os.environ.get("KNOWLEDGE_TRANSFER_MODEL", "tencent/hy3").strip() or "tencent/hy3"
+# Keep the model configurable so a future provider migration does not require a code deploy.
+OPENROUTER_MODEL = os.environ.get("KNOWLEDGE_TRANSFER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free").strip() or "nvidia/nemotron-3-super-120b-a12b:free"
 TRANSIENT_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
 
 INTERVIEWER_SYSTEM_PROMPT = """You are the Synapse Knowledge Transfer Interviewer, an AI conducting a

@@ -44,10 +44,10 @@ from config import CHAT_URL, get_openrouter_key
 from confidence import calibrate_confidence
 
 MODEL_CHAIN = [
-    "tencent/hy3:free",                        # primary (promoted 2026-07-08, see above)
-    "nvidia/nemotron-3-super-120b-a12b:free",  # first fallback
+    "nvidia/nemotron-3-super-120b-a12b:free",
     "openai/gpt-oss-120b:free",
     "google/gemma-4-31b-it:free",
+    "openrouter/free",
 ]
 PRIMARY_MODEL = MODEL_CHAIN[0]
 TIMEOUT_S = int(os.environ.get("SYNTHESIZER_TIMEOUT_S", "45"))
@@ -417,7 +417,8 @@ def synthesize_answer(question, retrieval_plan,
             ],
             "temperature": 0.1,
             "max_tokens": MAX_TOKENS,
-            "reasoning": {"effort": REASONING_EFFORT},
+            # Do not force a reasoning effort: free models expose different
+            # supported effort sets, and an unsupported value causes HTTP 400.
         }
         for backoff in retries:
             resp = requests.post(CHAT_URL, headers=headers, json=payload, timeout=TIMEOUT_S)
@@ -429,7 +430,9 @@ def synthesize_answer(question, retrieval_plan,
                 time.sleep(backoff)
                 continue
             break
-        resp.raise_for_status()
+        if not resp.ok:
+            detail = body.get("error") if isinstance(body, dict) else body
+            raise RuntimeError(f"OpenRouter HTTP {resp.status_code}: {str(detail)[:240]}")
         if "error" in body:                    # OpenRouter can 200 with an error payload
             raise ValueError(f"provider error: {str(body['error'])[:150]}")
         answer = (body["choices"][0]["message"].get("content") or "").strip()
