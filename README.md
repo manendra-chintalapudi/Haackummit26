@@ -4,8 +4,6 @@
 
 Synapse connects structured operational data, telemetry records, quality and compliance information, maintenance history, documents, and expert knowledge. It returns answers with the records used to produce them.
 
-> Built for the ET AI Hackathon 2026 — Problem Statement 8: **AI for Industrial Knowledge Intelligence: Unified Asset & Operations Brain**.
-
 ## 1. Problem statement
 
 The facts needed to answer a production, maintenance, quality, or compliance question are distributed across independent systems: ERP, CMMS, SCADA/DCS, QMS, document repositories, standards registers, and RCA archives [R1][R2]. These systems use different identifiers, data shapes, timestamps, and vocabularies. A user must assemble the relevant records before an investigation can begin [R3].
