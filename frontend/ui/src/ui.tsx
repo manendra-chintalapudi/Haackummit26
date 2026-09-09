@@ -10,8 +10,6 @@ import { twMerge } from "tailwind-merge";
 declare global {
   interface Window {
     SYNAPSE_API_URL?: string;
-    synapseGetAccessToken?: () => Promise<string>;
-    synapseRefreshAccessToken?: () => Promise<string>;
     SynapsePillars?: {
       mount: (route: "rca" | "compliance" | "admin" | "knowledge-transfer") => Promise<void>;
       openFailure: (failureId: string) => void;
@@ -24,34 +22,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-async function accessToken(timeoutMs = 10_000): Promise<string> {
-  if (window.synapseGetAccessToken) {
-    const token = await window.synapseGetAccessToken();
-    if (token) return token;
-  }
-  await new Promise<void>((resolve) => {
-    let finished = false;
-    const done = () => {
-      if (finished) return;
-      finished = true;
-      window.clearTimeout(timer);
-      resolve();
-    };
-    const timer = window.setTimeout(done, timeoutMs);
-    window.addEventListener("synapse-auth-ready", done, { once: true });
-  });
-  return window.synapseGetAccessToken ? window.synapseGetAccessToken() : "";
-}
-
 export async function apiFetch<T>(path: string): Promise<T> {
-  let token = await accessToken();
   const base = (window.SYNAPSE_API_URL || window.location.origin).replace(/\/+$/, "");
-  const request = (value: string) => fetch(`${base}${path}`, { headers: value ? { Authorization: `Bearer ${value}` } : {} });
-  let response = await request(token);
-  if (response.status === 401 && window.synapseRefreshAccessToken) {
-    token = await window.synapseRefreshAccessToken();
-    if (token) response = await request(token);
-  }
+  const response = await fetch(`${base}${path}`);
   let payload: unknown;
   try {
     payload = await response.json();
@@ -68,18 +41,12 @@ export async function apiFetch<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  let token = await accessToken();
   const base = (window.SYNAPSE_API_URL || window.location.origin).replace(/\/+$/, "");
-  const request = (value: string) => fetch(`${base}${path}`, {
+  const response = await fetch(`${base}${path}`, {
     method: "POST",
-    headers: value ? { Authorization: `Bearer ${value}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  let response = await request(token);
-  if (response.status === 401 && window.synapseRefreshAccessToken) {
-    token = await window.synapseRefreshAccessToken();
-    if (token) response = await request(token);
-  }
   let payload: unknown;
   try {
     payload = await response.json();

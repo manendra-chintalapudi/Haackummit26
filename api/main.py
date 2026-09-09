@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from pipeline import ask_synapse, warm_up
-from api.auth import Identity, require_user
+from api.audit_store import append_event, list_events
 from api.compliance_store import get_standard_detail, get_summary as get_compliance_summary
 from api.knowledge_transfer import OPENROUTER_MODEL, extract_knowledge_cards, next_interview_turn
 from api.rca_store import get_failure_detail, get_failures, get_summary
@@ -77,19 +77,29 @@ class KnowledgeExtractionRequest(BaseModel):
 
 
 @app.post("/api/ask")
-def ask(req: AskRequest, identity: Identity = Depends(require_user)):
+def ask(req: AskRequest):
     """Run one question through the full Synapse pipeline. Never crashes the server."""
     question = (req.question or "").strip()
     if not question:
         return JSONResponse(status_code=400, content={"error": "question is empty"})
     try:
-        return ask_synapse(question)
+        result = ask_synapse(question)
+        plan = result.get("retrieval_plan", {}) if isinstance(result, dict) else {}
+        append_event(action="question.answered", outcome="success", resource_type="chat_question", detail=question, metadata={"layers": plan.get("layers", []), "model": result.get("model_used") if isinstance(result, dict) else None, "latency": result.get("latency", {}) if isinstance(result, dict) else {}})
+        return result
     except Exception as exc:
+        append_event(action="question.answered", outcome="failure", resource_type="chat_question", detail=question, metadata={"error": f"{type(exc).__name__}: {exc}"})
         return JSONResponse(status_code=500, content={"error": f"{type(exc).__name__}: {exc}"})
 
 
+@app.get("/api/audit-logs")
+def audit_logs(limit: int = Query(default=100, ge=1, le=500), action: str | None = None, outcome: str | None = None):
+    append_event(action="audit_log.viewed", outcome="success", resource_type="audit_trail")
+    return {"events": list_events(limit=limit, action=action, outcome=outcome)}
+
+
 @app.post("/api/knowledge-transfer/interview")
-def knowledge_transfer_interview(req: KnowledgeTransferRequest, identity: Identity = Depends(require_user)):
+def knowledge_transfer_interview(req: KnowledgeTransferRequest):
     """Generate one short, spoken interview turn with Tencent HY3 on OpenRouter."""
     try:
         message = next_interview_turn(req.profile, req.plan, [entry.model_dump() for entry in req.transcript])
@@ -99,7 +109,7 @@ def knowledge_transfer_interview(req: KnowledgeTransferRequest, identity: Identi
 
 
 @app.post("/api/knowledge-transfer/extract")
-def knowledge_transfer_extract(req: KnowledgeExtractionRequest, identity: Identity = Depends(require_user)):
+def knowledge_transfer_extract(req: KnowledgeExtractionRequest):
     """Extract unverified knowledge cards from the completed transcript."""
     if not req.transcript:
         return JSONResponse(status_code=400, content={"error": "the interview transcript is empty"})
@@ -112,7 +122,7 @@ def knowledge_transfer_extract(req: KnowledgeExtractionRequest, identity: Identi
 
 # ---- RCA & Failures: direct read-only Neo4j browsing (never calls the synthesizer) ----
 @app.get("/api/rca/summary")
-def rca_summary(identity: Identity = Depends(require_user)):
+def rca_summary():
     return get_summary()
 
 
@@ -124,7 +134,6 @@ def rca_failures(
     severity: str | None = None,
     has_rca: bool | None = None,
     sort: str = Query(default="recent", pattern="^(recent|severe|recurring)$"),
-    identity: Identity = Depends(require_user),
 ):
     return get_failures(
         equipment_type=equipment_type,
@@ -137,7 +146,7 @@ def rca_failures(
 
 
 @app.get("/api/rca/failures/{failure_id}")
-def rca_failure_detail(failure_id: str, identity: Identity = Depends(require_user)):
+def rca_failure_detail(failure_id: str):
     detail = get_failure_detail(failure_id)
     if detail is None:
         raise HTTPException(status_code=404, detail=f"Failure {failure_id} not found")
@@ -146,18 +155,18 @@ def rca_failure_detail(failure_id: str, identity: Identity = Depends(require_use
 
 # ---- Compliance: direct read-only Neo4j patterns (never calls the synthesizer) ----
 @app.get("/api/compliance/summary")
-def compliance_summary(identity: Identity = Depends(require_user)):
+def compliance_summary():
     return get_compliance_summary()
 
 
 @app.get("/api/compliance/standards")
-def compliance_standards(identity: Identity = Depends(require_user)):
+def compliance_standards():
     summary = get_compliance_summary()
     return {"count": len(summary["standards"]), "standards": summary["standards"]}
 
 
 @app.get("/api/compliance/standards/{family_id}")
-def compliance_standard_detail(family_id: str, identity: Identity = Depends(require_user)):
+def compliance_standard_detail(family_id: str):
     detail = get_standard_detail(family_id)
     if detail is None:
         raise HTTPException(status_code=404, detail=f"Compliance standard {family_id} not found")
