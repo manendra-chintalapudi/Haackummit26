@@ -1,6 +1,6 @@
 # 🧠 Synapse
 
-## AI-powered industrial knowledge intelligence for steel operations
+## AI-powered industrial knowledge intelligence for Plant operations 
 
 Synapse is a unified asset and operations brain for industrial plants. It connects structured operational data, live-style telemetry records, quality and compliance information, maintenance history, documents, and expert knowledge so teams can ask one question and receive an evidence-backed answer.
 
