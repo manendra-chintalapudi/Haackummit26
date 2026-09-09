@@ -1,109 +1,105 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const DEMO_AUTH_KEY = "synapse_demo_auth";
+const ROLE_LABELS = { admin: "Admin", qa: "Quality Assurance", maintenance: "Maintenance", ops: "Operations" };
 
-const url = window.SYNAPSE_SUPABASE_URL;
-const key = window.SYNAPSE_SUPABASE_PUBLISHABLE_KEY;
-const supabase = url && key ? createClient(url, key, { auth: {
-  persistSession: true, autoRefreshToken: true, detectSessionInUrl: true
-}}) : null;
+function readDemoAuth() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DEMO_AUTH_KEY) || "null");
+    if (saved?.name && ROLE_LABELS[saved.role]) return saved;
+  } catch (_) {}
+  return { name: "Demo User", role: "maintenance", label: ROLE_LABELS.maintenance };
+}
 
-window.synapseSupabase = supabase;
-window.synapseGetAccessToken = async () => {
-  if (!supabase) return "";
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || "";
-};
-window.synapseRefreshAccessToken = async () => {
-  if (!supabase) return "";
-  const { data: { session }, error } = await supabase.auth.refreshSession();
-  if (error) return "";
-  return session?.access_token || "";
-};
+window.synapseSupabase = null;
+window.synapseGetAccessToken = async () => "";
+window.synapseRefreshAccessToken = async () => "";
 window.synapseSignOut = async () => {
-  if (supabase) await supabase.auth.signOut();
+  localStorage.removeItem(DEMO_AUTH_KEY);
+  localStorage.removeItem("synapse_user");
   location.replace("/login");
 };
 
-async function getIdentity(session){
-  const metadata = session.user.user_metadata || {};
-  let identity = { email: session.user.email || "", name: metadata.full_name || session.user.email?.split("@")[0] || "User", role: metadata.requested_role || "maintenance" };
-  try {
-    const { data } = await supabase.from("profiles").select("full_name,role,approved").eq("id",session.user.id).maybeSingle();
-    if (data) identity = { ...identity, name: data.full_name || identity.name, role: data.role || identity.role, approved: data.approved };
-  } catch (_) {}
-  return identity;
-}
-
-async function protectApp(){
-  if (document.body.dataset.authRequired !== "true") return;
-  if (!supabase) return location.replace("/login?error=config");
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return location.replace(`/login?next=${encodeURIComponent(location.pathname + location.hash)}`);
-  const identity = await getIdentity(session);
-  window.synapseAuth = { session, ...identity };
+function publishDemoAuth() {
+  const identity = readDemoAuth();
+  window.synapseAuth = { session: null, email: "demo@synapse.local", ...identity };
   document.body.classList.remove("auth-loading");
   const emailNode = document.getElementById("auth-email");
-  if (emailNode) emailNode.textContent = identity.email;
+  if (emailNode) emailNode.textContent = "Demo mode";
   window.dispatchEvent(new CustomEvent("synapse-auth-ready", { detail: window.synapseAuth }));
 }
 
-function setupAuthPage(){
+function setupAuthPage() {
   const form = document.getElementById("auth-form");
-  if (!form || !supabase) return;
-  const shell = document.getElementById("auth-shell"), status = document.getElementById("auth-status");
-  const submit = document.getElementById("auth-submit"), loginTab = document.getElementById("auth-tab-login"), registerTab = document.getElementById("auth-tab-register");
-  const swipe = document.getElementById("auth-swipe"), swipeHandle = document.getElementById("swipe-handle"), swipeLabel = document.getElementById("swipe-label");
-  let mode = new URLSearchParams(location.search).get("mode") === "register" ? "signup" : "signin";
-  const resetSwipe = () => { swipe.classList.remove("dragging","complete","loading"); swipe.style.setProperty("--swipe-x","0px"); };
-  const submitSwipe = () => { if (swipe.classList.contains("loading")) return; swipe.classList.add("complete","loading"); form.requestSubmit(submit); };
+  if (!form) return;
+  const shell = document.getElementById("auth-shell");
+  const status = document.getElementById("auth-status");
+  const submit = document.getElementById("auth-submit");
+  const loginTab = document.getElementById("auth-tab-login");
+  const registerTab = document.getElementById("auth-tab-register");
+  const swipe = document.getElementById("auth-swipe");
+  const swipeHandle = document.getElementById("swipe-handle");
+  const swipeLabel = document.getElementById("swipe-label");
+  let mode = "signin";
+
+  const resetSwipe = () => {
+    swipe.classList.remove("dragging", "complete", "loading");
+    swipe.style.setProperty("--swipe-x", "0px");
+  };
   const render = () => {
-    const signup = mode === "signup"; shell.classList.toggle("signup", signup);
-    document.getElementById("auth-title").textContent = signup ? "Create account" : "Sign in";
-    document.getElementById("auth-copy").textContent = signup ? "Set up your profile and choose your demo plant role." : "Use your Synapse credentials to continue.";
-    document.getElementById("visual-title").textContent = signup ? "Let’s set up your workspace." : "Welcome back.";
-    document.getElementById("visual-copy").textContent = signup ? "Your Synapse assistant is taking note of your role and access." : "Continue your traceable plant investigations securely.";
-    swipeLabel.textContent = signup ? "Swipe to create account" : "Swipe to log in";
+    const signup = mode === "signup";
+    shell.classList.toggle("signup", signup);
+    document.getElementById("auth-title").textContent = signup ? "Create demo profile" : "Enter the demo";
+    document.getElementById("auth-copy").textContent = "Use any name, password, and plant role to continue.";
+    document.getElementById("visual-title").textContent = signup ? "Let’s set up your workspace." : "Welcome to the demo.";
+    document.getElementById("visual-copy").textContent = "No account, email confirmation, or password service is required.";
+    swipeLabel.textContent = signup ? "Swipe to enter demo" : "Swipe to log in";
     swipeHandle.setAttribute("aria-label", swipeLabel.textContent);
-    loginTab.classList.toggle("active", !signup); registerTab.classList.toggle("active", signup);
-    loginTab.setAttribute("aria-selected", String(!signup)); registerTab.setAttribute("aria-selected", String(signup));
-    form.full_name.required = signup; form.confirm_password.required = signup; form.password.autocomplete = signup ? "new-password" : "current-password"; resetSwipe();
+    loginTab.classList.toggle("active", !signup);
+    registerTab.classList.toggle("active", signup);
+    loginTab.setAttribute("aria-selected", String(!signup));
+    registerTab.setAttribute("aria-selected", String(signup));
+    resetSwipe();
   };
   render();
   loginTab.onclick = () => { mode = "signin"; status.textContent = ""; render(); };
   registerTab.onclick = () => { mode = "signup"; status.textContent = ""; render(); };
-  document.getElementById("forgot-password").onclick = async () => {
-    const email = form.email.value.trim();
-    if (!email) { status.textContent = "Enter your email first, then choose Forgot password."; status.className = "status error"; return; }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/login` });
-    status.textContent = error ? error.message : "Password reset instructions have been sent to your email.";
-    status.className = error ? "status error" : "status success";
-  };
-  let dragStart = 0, dragMax = 0;
-  swipeHandle.addEventListener("pointerdown", event => { if (swipe.classList.contains("loading")) return; dragStart = event.clientX; dragMax = Math.max(1, swipe.clientWidth - swipeHandle.offsetWidth - 10); swipe.classList.add("dragging"); swipeHandle.setPointerCapture(event.pointerId); });
-  swipeHandle.addEventListener("pointermove", event => { if (!swipe.classList.contains("dragging")) return; const x = Math.max(0, Math.min(dragMax, event.clientX - dragStart)); swipe.style.setProperty("--swipe-x", `${x}px`); });
-  const finishDrag = event => { if (!swipe.classList.contains("dragging")) return; const x = Math.max(0, Math.min(dragMax, event.clientX - dragStart)); swipe.classList.remove("dragging"); if (x >= dragMax * .72) submitSwipe(); else resetSwipe(); };
-  swipeHandle.addEventListener("pointerup", finishDrag); swipeHandle.addEventListener("pointercancel", resetSwipe);
-  swipeHandle.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); submitSwipe(); } });
-  form.addEventListener("invalid", resetSwipe, true);
-  form.onsubmit = async event => {
-    event.preventDefault(); submit.disabled = true; swipe.classList.add("loading"); status.textContent = ""; status.className = "status";
-    const email = form.email.value.trim(), password = form.password.value;
-    if (mode === "signup" && password !== form.confirm_password.value) { submit.disabled = false; resetSwipe(); status.textContent = "Passwords do not match."; status.className = "status error"; return; }
-    const result = mode === "signin" ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({
-      email, password, options: { emailRedirectTo: `${location.origin}/app`, data: { full_name: form.full_name.value.trim(), requested_role: form.role.value } }
-    });
+
+  const submitDemo = () => {
+    if (swipe.classList.contains("loading")) return;
+    const name = form.full_name.value.trim() || "Demo User";
+    const role = ROLE_LABELS[form.role.value] ? form.role.value : "maintenance";
+    localStorage.setItem(DEMO_AUTH_KEY, JSON.stringify({ name, role, label: ROLE_LABELS[role] }));
     submit.disabled = false;
-    if (result.error) { resetSwipe(); status.textContent = result.error.message; status.className = "status error"; return; }
-    if (mode === "signup" && !result.data.session) { resetSwipe(); status.textContent = "Account created. Check your email to confirm it, then sign in."; status.className = "status success"; return; }
-    const next = new URLSearchParams(location.search).get("next") || "/app";
-    location.replace(next.startsWith("/") ? next : "/app");
+    location.replace(new URLSearchParams(location.search).get("next") || "/app");
   };
+  const finishDrag = event => {
+    if (!swipe.classList.contains("dragging")) return;
+    const max = Math.max(1, swipe.clientWidth - swipeHandle.offsetWidth - 10);
+    const x = Math.max(0, Math.min(max, event.clientX - Number(swipe.dataset.startX)));
+    swipe.classList.remove("dragging");
+    if (x >= max * .72) submitDemo(); else resetSwipe();
+  };
+  swipeHandle.addEventListener("pointerdown", event => {
+    swipe.dataset.startX = event.clientX;
+    swipe.classList.add("dragging");
+    swipeHandle.setPointerCapture(event.pointerId);
+  });
+  swipeHandle.addEventListener("pointermove", event => {
+    if (!swipe.classList.contains("dragging")) return;
+    const max = Math.max(1, swipe.clientWidth - swipeHandle.offsetWidth - 10);
+    const x = Math.max(0, Math.min(max, event.clientX - Number(swipe.dataset.startX)));
+    swipe.style.setProperty("--swipe-x", `${x}px`);
+  });
+  swipeHandle.addEventListener("pointerup", finishDrag);
+  swipeHandle.addEventListener("pointercancel", resetSwipe);
+  swipeHandle.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); submitDemo(); }
+  });
+  form.addEventListener("invalid", resetSwipe, true);
+  form.onsubmit = event => { event.preventDefault(); submitDemo(); };
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   setupAuthPage();
-  if (document.body.dataset.authRequired === "true") await protectApp();
-  if (document.body.dataset.authPage === "true" && supabase) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) location.replace("/app");
-  }
+  if (document.body.dataset.authRequired === "true") publishDemoAuth();
+  if (document.body.dataset.authPage === "true" && localStorage.getItem(DEMO_AUTH_KEY)) location.replace("/app");
 });
