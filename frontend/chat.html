@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Synapse — Plant Brain</title>
 <script src="config.js"></script>
-<script type="module" src="auth.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -684,7 +683,7 @@
   }
 </style>
 </head>
-<body class="auth-loading" data-auth-required="true">
+<body>
 <div class="app">
 
   <!-- ================= SIDEBAR ================= -->
@@ -704,7 +703,7 @@
       <a href="#/compliance" data-route="compliance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3.5v5.7c0 5-3.4 8.6-8 10.8-4.6-2.2-8-5.8-8-10.8V5.5z"/><path d="M9 12l2 2 4-4.5"/></svg>Compliance</a>
       <a href="#/knowledge-transfer" data-route="knowledge-transfer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z"/></svg>Knowledge Transfer</a>
       <a href="#/admin" data-route="admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Evaluation Lab</a>
-      <a href="#/logs" data-route="logs" data-roles="admin,ops"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/></svg>System Logs</a>
+      <a href="#/logs" data-route="logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/></svg>System Logs</a>
       <a href="#/history" data-route="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>History</a>
     </nav>
 
@@ -847,10 +846,7 @@
       <div id="admin-react-root" class="synapse-pillars-root"><div class="sp-boot-state">Loading the Evaluation Lab…</div></div>
     </section>
 
-    <section class="page" id="page-logs"><div class="ph">
-      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/></svg></div>
-      <h2>System Logs</h2><p>Router decisions, retrieval latencies and synthesizer model fallbacks for every question asked.</p>
-      <span class="soon">COMING SOON</span></div></section>
+    <section class="page" id="page-logs"><div class="histpage"><h2>System Logs</h2><p class="sub">Audit trail for questions, retrieval evidence, model execution and failures.</p><div class="legend"><label>Outcome <select id="auditOutcome"><option value="">All</option><option value="success">Success</option><option value="failure">Failure</option></select></label> <button id="auditRefresh">Refresh</button><span id="auditStatus"></span></div><div id="auditRows" class="histlist"><div class="sess-empty">Open System Logs to load the audit trail.</div></div></div></section>
 
     <!-- ---------- HISTORY PAGE ---------- -->
     <section class="page" id="page-history">
@@ -966,18 +962,7 @@ function go(r){ location.hash = "#/" + r; }
 let rcaLoaded=false,rcaLoading=false,rcaCurrent=null,rcaFilterBound=false;
 function rcaLabel(value){return String(value||"—").replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());}
 function rcaDate(value){const text=String(value||"");return text?text.slice(0,10):"—";}
-async function rcaAccessToken(timeoutMs=10000){
-  if(typeof window.synapseGetAccessToken === "function"){
-    const token=await window.synapseGetAccessToken();if(token)return token;
-  }
-  await new Promise(resolve=>{
-    let settled=false;const finish=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve();};
-    const timer=setTimeout(finish,timeoutMs);
-    window.addEventListener("synapse-auth-ready",finish,{once:true});
-  });
-  if(typeof window.synapseGetAccessToken !== "function")return "";
-  return await window.synapseGetAccessToken();
-}
+async function rcaAccessToken(){ return ""; }
 async function rcaFetch(path){
   let accessToken=await rcaAccessToken();
   const request=token=>fetch(API_BASE+path,{headers:token?{Authorization:`Bearer ${token}`}:{}});
@@ -1148,11 +1133,12 @@ function applyRoute(){
     a.classList.toggle("active",current);
     if(current)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");
   });
-  const routeTitles={chat:"Chat",history:"History",graph:"Knowledge Graph",rca:"RCA & Failures",compliance:"Compliance","knowledge-transfer":"Knowledge Transfer",admin:"Evaluation Lab"};
+  const routeTitles={chat:"Chat",history:"History",graph:"Knowledge Graph",rca:"RCA & Failures",compliance:"Compliance","knowledge-transfer":"Knowledge Transfer",admin:"Evaluation Lab",logs:"System Logs"};
   document.title=`${routeTitles[route]||"Synapse"} — Synapse`;
   const activePage=document.getElementById("page-"+route),heading=activePage?.querySelector("h1,h2");
   if(heading){heading.setAttribute("tabindex","-1");requestAnimationFrame(()=>heading.focus({preventScroll:true}));}
   if (route === "history") renderHistoryPage();
+  if (route === "logs") loadAuditLogs();
   if (route === "graph" && window.initKG) window.initKG();
 }
 document.querySelectorAll("#nav a").forEach(a => a.addEventListener("click", () => go(a.dataset.route)));
@@ -1201,6 +1187,14 @@ function renderHistoryPage(){
       <span class="d">${new Date(s.ts).toLocaleString()}</span></div>`;
   }).join("");
 }
+
+/* ---------------- system audit trail ---------------- */
+let auditLoading = false;
+function auditText(value){ return String(value || "—").replace(/[._]/g, " "); }
+function auditRuntime(meta){ const m=meta||{}, layers=Array.isArray(m.layers)&&m.layers.length?m.layers.join(", "):"—", model=m.model?` · ${m.model}`:"", total=m.latency?.total_s!=null?` · ${m.latency.total_s}s`:"", error=m.error?` · ${m.error}`:""; return `${layers}${model}${total}${error}`; }
+function renderAuditLogs(events){ const target=document.getElementById("auditRows"); target.innerHTML=events.length?events.map(e=>`<div class="hrow" style="cursor:default;align-items:flex-start"><span class="d">${esc(new Date(e.occurred_at).toLocaleString())}</span><span class="t"><b>${esc(auditText(e.action))}</b><br>${esc(e.detail||e.resource_type)}</span><span class="dots">${esc(auditRuntime(e.metadata))}</span><span class="d">${esc(e.outcome)}</span></div>`).join(""):`<div class="sess-empty">No audit events match this filter.</div>`; }
+async function loadAuditLogs(){ if(auditLoading)return; auditLoading=true; const status=document.getElementById("auditStatus"), target=document.getElementById("auditRows"); status.textContent="Loading…"; target.innerHTML=`<div class="sess-empty">Loading audit trail…</div>`; try{const outcome=document.getElementById("auditOutcome").value, query=new URLSearchParams({limit:"100"});if(outcome)query.set("outcome",outcome);const response=await fetch(`${API_BASE}/api/audit-logs?${query}`),data=await response.json();if(!response.ok)throw new Error(data.detail||data.error||`HTTP ${response.status}`);renderAuditLogs(data.events||[]);status.textContent=`${(data.events||[]).length} events`;}catch(error){target.innerHTML=`<div class="sess-empty">Could not load the audit trail: ${esc(error.message)}</div>`;status.textContent="Load failed";}finally{auditLoading=false;} }
+document.getElementById("auditRefresh").addEventListener("click",loadAuditLogs);document.getElementById("auditOutcome").addEventListener("change",loadAuditLogs);
 function newChat(){
   current = null;
   document.getElementById("log").innerHTML = "";
