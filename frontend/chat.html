@@ -1308,10 +1308,12 @@ function sourcesBlock(plan, model, lat){
   const tier = (plan.tier || "") + (plan.tier3_source ? " / " + plan.tier3_source : "");
   const layers = (plan.layers || []).map(l => `<span class="pill">${l}</span>`).join("") || "<span class='pill'>none</span>";
   const L = lat || {};
+  const routingScores = {confident:85, "ambiguous-resolved":65, ambiguous:45, unresolvable:0};
+  const routingScore = Number.isFinite(Number(plan.confidence_score)) ? Number(plan.confidence_score) : (routingScores[plan.confidence] ?? 0);
   return `<details class="plan"><summary><span class="caret">▸</span> Sources used</summary><div class="body">
     <div class="row"><span class="k">Layers</span><span>${layers}</span></div>
     <div class="row"><span class="k">Tier</span><span>${esc(tier)}</span></div>
-    <div class="row"><span class="k">Confidence</span><span>${esc(plan.confidence || "")}</span></div>
+    <div class="row"><span class="k">Confidence score</span><span><b>${routingScore}/100</b> <small>(${esc(plan.confidence || "")})</small></span></div>
     <div class="row"><span class="k">Model</span><span>${esc(model || "")}</span></div>
     <div class="row lat"><span class="k">Latency</span><span>total <b>${L.total_s}s</b> &nbsp;·&nbsp; route ${L.routing_s}s · retrieve ${L.retrieval_s}s · synth ${L.synthesis_s}s</span></div></div></details>`;
 }
