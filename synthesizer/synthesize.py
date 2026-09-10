@@ -304,6 +304,16 @@ def _deterministic_evidence_answer(question, graph_results, document_results, st
             root_cause = re.sub(r"^root cause traced to\s*", "", root_cause, flags=re.I)
             failure_label = str(failure.get("failure_mode") or "failure").replace("_", " ")
             exact_doc = next((doc for doc in documents if fid in doc.get("text", "")), None)
+            # Reuse the RCA endpoint's graph-backed correlation calculation so
+            # the chat answer and RCA detail panel show the same score.
+            try:
+                from api.rca_store import get_failure_detail
+                confidence = (get_failure_detail(fid) or {}).get("confidence") or {}
+            except Exception:
+                confidence = {}
+            correlation_score = confidence.get("score", 0)
+            correlation_phi = confidence.get("correlation_coefficient", 0)
+            correlation_counts = confidence.get("correlation_counts") or {}
             lineage_confidence = calibrate_confidence(
                 direct_chain=True,
                 corroborating_sources=2 if exact_doc else 1,
@@ -322,7 +332,7 @@ def _deterministic_evidence_answer(question, graph_results, document_results, st
                 f"{procedure} procedure finding: {violated} This linked record does not prove "
                 "that the procedure gap caused the failure.\n\n"
                 f"**Insight:** The failure, RCA, procedure finding and corrective work are linked by exact IDs across the audited graph"
-                f"{' and its work-order document' if exact_doc else ''}. **{lineage_confidence} confidence in the record lineage and recorded fields only.** "
+                f"{' and its work-order document' if exact_doc else ''}. **Correlation confidence: {correlation_score}/100** (Phi={correlation_phi:.2f}; {correlation_counts.get('both_present', 0)} co-occurrences across {correlation_counts.get('total', 0)} records). **{lineage_confidence} confidence in the record lineage and recorded fields only.** "
                 "**Low confidence for causal attribution**: one associated event chain has no "
                 f"control, counterfactual, or independent incident corroboration.{synthetic_disclosure} "
                 f"The operational risk is treating a recorded association as proof about the {failure_label}.\n\n"
