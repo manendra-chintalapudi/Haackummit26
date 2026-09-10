@@ -5,6 +5,7 @@ import json
 import re
 import threading
 import time
+import math
 from collections import Counter
 from datetime import date, datetime
 
@@ -107,6 +108,41 @@ def _severity(deviations: list[dict]) -> str:
     levels = [str(row.get("severity") or "").lower() for row in deviations]
     levels = [level for level in levels if level in SEVERITY_RANK]
     return max(levels, key=SEVERITY_RANK.get) if levels else "unrated"
+
+
+def _phi_correlation(*, cause_count: int, outcome_count: int, both_count: int, total_count: int) -> float:
+    """Phi coefficient for cause-present vs outcome-present binary records."""
+    a = both_count
+    b = max(0, cause_count - a)
+    c = max(0, outcome_count - a)
+    d = max(0, total_count - a - b - c)
+    denominator = math.sqrt((a + b) * (c + d) * (a + c) * (b + d))
+    return (a * d - b * c) / denominator if denominator else 0.0
+
+
+def _correlation_evidence(failure_mode: str, root_cause_text: str) -> dict:
+    """Build the auditable contingency-table inputs from the locked graph snapshot."""
+    raw = [_plain(row) for row in query_graph(LIST_QUERY)]
+    cause_key = _normalise(root_cause_text)
+    outcome_key = _normalise(failure_mode)
+    pairs = [
+        (_normalise((row.get("rca") or {}).get("root_cause_text")), _normalise((row.get("failure") or {}).get("failure_mode")))
+        for row in raw
+    ]
+    total = len(pairs)
+    cause_count = sum(bool(cause_key) and cause == cause_key for cause, _ in pairs)
+    outcome_count = sum(bool(outcome_key) and outcome == outcome_key for _, outcome in pairs)
+    both_count = sum(bool(cause_key) and bool(outcome_key) and cause == cause_key and outcome == outcome_key for cause, outcome in pairs)
+    complete_count = sum(bool(cause) and bool(outcome) for cause, outcome in pairs)
+    return {
+        "total": total,
+        "cause_present": cause_count,
+        "outcome_present": outcome_count,
+        "both_present": both_count,
+        "complete_pairs": complete_count,
+        "phi": _phi_correlation(cause_count=cause_count, outcome_count=outcome_count, both_count=both_count, total_count=total),
+        "data_completeness_pct": (complete_count * 100 / total) if total else 0,
+    }
 
 
 def _load_failures(force: bool = False) -> list[dict]:
@@ -228,10 +264,14 @@ def get_failure_detail(failure_id: str) -> dict | None:
     recurrences = [_plain(item) for item in query_graph(RECURRENCE_QUERY, {"failure_id": failure_id})]
     recurrences = [{**(item.get("failure") or {}), "equipment": item.get("equipment") or {}, "rca": item.get("rca") or {}} for item in recurrences]
     corroborating = sum(bool(value) for value in (technician, procedure, documents, deviations, downstream_tests))
+    correlation = _correlation_evidence(failure.get("failure_mode"), rca.get("root_cause_text"))
     confidence = calibrate_confidence(
         direct_chain=bool(rca.get("rca_id")),
         corroborating_sources=corroborating,
-        sample_size=max(1, len(recurrences) + 1),
+        sample_size=correlation["total"],
+        correlation_coefficient=correlation["phi"],
+        data_completeness_pct=correlation["data_completeness_pct"],
+        correlation_counts={key: correlation[key] for key in ("total", "cause_present", "outcome_present", "both_present", "complete_pairs")},
     )
     severity = _severity(deviations)
     status = "open" if not rca.get("rca_id") else "recurring" if recurrences else "resolved"

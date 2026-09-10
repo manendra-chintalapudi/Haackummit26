@@ -529,8 +529,10 @@ function ConfidencePanel({ detail }: { detail: FailureDetail }) {
         <Gauge size={18} aria-hidden="true" />
       </CardHeader>
       <CardContent className="sp-rca-confidence">
-        <Badge tone={confidenceTone(confidence.level)}>{labelize(confidence.level || "low")}</Badge>
+        <div><strong style={{ fontSize: 28 }}>{number(confidence.score || 0)}</strong><span> / 100</span></div>
+        <Badge tone={confidenceTone(confidence.level)}>{labelize(confidence.level || "low")} band</Badge>
         <p>{stringValue(confidence.reason, "No confidence evidence is recorded.")}</p>
+        {Array.isArray(confidence.factors) && <div>{confidence.factors.map((factor: any) => <div key={String(factor.name)}><span>{String(factor.name)}</span><strong>{number(factor.points)} / {number(factor.max_points)}</strong></div>)}</div>}
         <dl>
           <div><dt>Sample size</dt><dd>{number(confidence.sample_size || 1)}</dd></div>
           <div><dt>Source types</dt><dd>{number(confidence.corroborating_sources || 0)}</dd></div>
