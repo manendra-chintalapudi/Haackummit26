@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Synapse — Onboarding</title>
+  <style>
+    :root{--ink:#20233a;--muted:#747990;--line:#e7e8f0;--soft:#f5f6fb;--purple:#4b54d2;--green:#0e9f6e;--amber:#b4690e;font-family:Inter,Segoe UI,Arial,sans-serif}
+    *{box-sizing:border-box}body{margin:0;background:#f1f2f7;color:var(--ink)}a{text-decoration:none;color:inherit}
+    .shell{max-width:1180px;margin:auto;padding:28px 24px 56px}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:58px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}.mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;color:#fff;background:linear-gradient(145deg,#5662dc,#7b68df);font-size:12px}.back{font-size:13px;font-weight:700;color:var(--muted)}
+    .hero{max-width:760px;margin-bottom:34px}.eyebrow{color:var(--purple);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.hero h1{font-size:clamp(34px,5vw,58px);line-height:1.02;letter-spacing:-1.8px;margin:12px 0 16px}.hero p{font-size:17px;line-height:1.6;color:var(--muted);margin:0}
+    .steps{display:flex;gap:8px;margin:28px 0 18px}.step{height:5px;flex:1;border-radius:10px;background:#dfe1ed}.step.on{background:var(--purple)}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 12px 32px rgba(32,35,58,.06);min-height:350px;display:flex;flex-direction:column}.icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px;background:#eef0ff;color:var(--purple);margin-bottom:22px}.card:nth-child(2) .icon{background:#e6f7f1;color:var(--green)}.card:nth-child(3) .icon{background:#fff6e5;color:var(--amber)}h2{font-size:20px;margin:0 0 9px;letter-spacing:-.4px}.card p{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0 0 20px}.items{display:grid;gap:9px;margin-top:auto}.item{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:#fbfbfd;font-size:12px;font-weight:700}.item span{font-size:14px}.button{border:0;border-radius:11px;background:var(--ink);color:#fff;padding:11px 14px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;margin-top:14px}.button.alt{background:#eef0ff;color:var(--purple)}
+    .status{display:none;margin-top:14px;padding:11px 12px;border-radius:10px;background:#e6f7f1;color:#087b56;font-size:12px;font-weight:700}.status.show{display:block}.drop{border:1.5px dashed #cbd0e5;border-radius:12px;padding:16px;text-align:center;color:var(--muted);font-size:12px;margin-top:8px;cursor:pointer}.drop strong{display:block;color:var(--ink);margin-bottom:5px}.footer{margin-top:26px;padding:18px 20px;background:#20233a;color:#fff;border-radius:16px;display:flex;justify-content:space-between;gap:20px;align-items:center}.footer small{color:#c5c7d7;line-height:1.5}.footer b{font-size:13px}.pill{padding:8px 11px;border-radius:999px;background:#373b58;color:#dfe1ff;font-size:11px;font-weight:800;white-space:nowrap}
+    @media(max-width:850px){.grid{grid-template-columns:1fr}.card{min-height:0}.top{margin-bottom:40px}.footer{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top"><a class="brand" href="/"><span class="mark">S</span>Synapse</a><a class="back" href="/">← Back to home</a></header>
+    <section class="hero">
+      <div class="eyebrow">Enterprise onboarding</div>
+      <h1>Connect your plant’s knowledge layer.</h1>
+      <p>Bring existing systems and operating knowledge into Synapse without replacing the tools your teams already use.</p>
+      <div class="steps" aria-label="Onboarding sections"><span class="step on"></span><span class="step on"></span><span class="step on"></span></div>
+    </section>
+    <section class="grid">
+      <article class="card"><div class="icon">↗</div><h2>Connect enterprise systems</h2><p>Set up read-only connections to the systems that already run your operation.</p><div class="items"><div class="item"><span>▦</span> ERP / SAP</div><div class="item"><span>⚙</span> CMMS · SCADA · QMS</div><button class="button" data-status="Connection setup is ready for your enterprise credentials.">Configure connections →</button></div><div class="status"></div></article>
+      <article class="card"><div class="icon">⌁</div><h2>Ingest operating knowledge</h2><p>Upload manuals, RCAs, SOPs, and standards. Synapse extracts evidence and prepares it for review.</p><div class="drop" tabindex="0"><strong>Drop a PDF here</strong>or choose a document from your computer</div><div class="items"><button class="button alt" data-file-input="true">Choose document</button></div><input id="file" type="file" accept="application/pdf,.pdf" hidden /><div class="status"></div></article>
+      <article class="card"><div class="icon">◌</div><h2>Monitor the integration</h2><p>See freshness, mapped records, and connection health before you put the evidence layer in front of a team.</p><div class="items"><div class="item"><span style="color:var(--green)">●</span> 4 sources ready to connect</div><div class="item"><span style="color:var(--amber)">◷</span> Read-only by default</div><button class="button" data-status="Monitoring will appear here after your first connection.">View integration health →</button></div><div class="status"></div></article>
+    </section>
+    <footer class="footer"><div><b>Start with a safe, traceable connection.</b><br /><small>Synapse keeps source records in place and adds a decision-support layer on top.</small></div><span class="pill">READ-ONLY FIRST</span></footer>
+  </main>
+  <script>
+    document.querySelectorAll('[data-status]').forEach(button => button.addEventListener('click', () => { const status = button.parentElement.nextElementSibling; status.textContent = button.dataset.status; status.classList.add('show'); }));
+    const input = document.getElementById('file');
+    const drop = document.querySelector('.drop');
+    document.querySelector('[data-file-input]').addEventListener('click', () => input.click());
+    input.addEventListener('change', () => { if (input.files[0]) { drop.querySelector('strong').textContent = input.files[0].name; drop.lastChild.textContent = 'Ready for extraction and review'; drop.parentElement.querySelector('.status').textContent = 'Document staged — extraction preview is ready.'; drop.parentElement.querySelector('.status').classList.add('show'); } });
+    drop.addEventListener('click', () => input.click());
+  </script>
+</body>
+</html>

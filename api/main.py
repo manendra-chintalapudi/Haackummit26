@@ -252,6 +252,12 @@ def landing_page():
     return FileResponse(FRONTEND / "landing.html")
 
 
+@app.get("/onboarding")
+@app.get("/onboarding/")
+def onboarding_page():
+    return FileResponse(FRONTEND / "onboarding" / "index.html")
+
+
 @app.get("/config.js")
 def frontend_config():
     # runtime frontend config (window.SYNAPSE_API_URL); served locally, static on Vercel
